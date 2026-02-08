@@ -1,5 +1,7 @@
 # gymnasium
 https://gymnasium.farama.org/
+## github
+https://github.com/Farama-Foundation/Gymnasium
 ## MarkdownViewer++ toggle
     ctrl-shft-M
 ## python setup
