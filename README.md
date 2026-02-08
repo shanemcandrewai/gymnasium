@@ -3,11 +3,13 @@ https://gymnasium.farama.org/
 ## MarkdownViewer++ toggle
     ctrl-shft-M
 ## python setup
-### Install Python install manager from Microsoft Store app.
+### install Python install manager from Microsoft Store app.
 https://apps.microsoft.com/detail/9nq7512cxl7t
-### Install Python 3.13
+### check highest required python version
+https://github.com/Farama-Foundation/Gymnasium
+#### install lower version if neccessary
     py install 3.13
-### add python executables to path of *current* user
+#### add python executables to path of *current* user
     %USERPROFILE%\AppData\Local\Python\bin
 ### Create virtual environment
 #### Git bash
