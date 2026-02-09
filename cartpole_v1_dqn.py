@@ -64,7 +64,7 @@ def select_action(state_l):
 
 def plot_durations(show_result=False):
     """plot durations"""
-    plt.figure(1)
+    # plt.figure(1)
     durations_t = torch.tensor(episode_durations, dtype=torch.float)
     if show_result:
         plt.title('Result')
@@ -233,6 +233,6 @@ if __name__ == "__main__":
                 break
 
     print('Complete')
-    plot_durations(show_result=True)
+    plot_durations(True)
     plt.ioff()
     plt.show()
