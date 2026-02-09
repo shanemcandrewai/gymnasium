@@ -22,5 +22,15 @@ https://github.com/Farama-Foundation/Gymnasium
 ### upgrade pip
     python -m pip install --upgrade pip
 ### install gymnasium
-    pip install gymnasium[classic-control]	
-   
+    pip install gymnasium[classic-control]
+## xonsh
+### .config\xonsh\rc.xsh
+
+	aliases['ll'] = 'ls -la --color=auto'
+
+	# import python modules from a local directory
+	# https://xon.sh/customization.html#import-python-modules-from-a-local-directory
+
+	import sys
+	sys.path.insert(0, '')	
+	   
