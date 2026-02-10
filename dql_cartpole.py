@@ -121,12 +121,11 @@ from collections import deque
 import random
 
 # Set up the environment
-# env = gym.make("CartPole-v1", render_mode="human")
 env = gym.make("CartPole-v1")
 
 # Define training parameters
-# num_episodes = 250
-num_episodes = 100
+num_episodes = 250
+# num_episodes = 20
 max_steps_per_episode = 200
 epsilon_start = 1.0
 epsilon_end = 0.2
@@ -151,6 +150,7 @@ for episode in range(num_episodes):
     epsilon = max(epsilon_end, epsilon_start * (epsilon_decay_rate ** episode))
 
     # Run one episode
+    step = 0
     for step in range(max_steps_per_episode):
         # Choose and perform an action
         action = new_agent.act(state, epsilon)
@@ -170,39 +170,45 @@ for episode in range(num_episodes):
             break
     
     if (episode + 1) % update_frequency == 0:
-        print(f"Episode {episode + 1}: Finished training")
+        print(f"Episode {episode + 1}: Finished training, Steps {step}")
 
 # Evaluate the agent's performance
-test_episodes = 100
-episode_rewards = []
+# test_episodes = 10
+# episode_rewards = []
 
-for episode in range(test_episodes):
-    state = env.reset()[0]
-    episode_reward = 0
-    done = False
+# for episode in range(test_episodes):
+    # state = env.reset()[0]
+    # episode_reward = 0
+    # done = False
     
-    while not done:
-        action = new_agent.act(state, eps=0.)
-        next_state, reward, done, truncated, _ = env.step(action)
-        episode_reward += reward
-        state = next_state
+    # while not done:
+        # action = new_agent.act(state, eps=0.)
+        # next_state, reward, done, truncated, _ = env.step(action)
+        # episode_reward += reward
+        # state = next_state
         
-    episode_rewards.append(episode_reward)
+    # episode_rewards.append(episode_reward)
 
-average_reward = sum(episode_rewards) / test_episodes
-print(f"Average reward over {test_episodes} test episodes: {average_reward:.2f}")
+# average_reward = sum(episode_rewards) / test_episodes
+# print(f"Average reward over {test_episodes} test episodes: {average_reward:.2f}")
 
 # Visualize the agent's performance
 import time
 
-state = env.reset()[0]
-done = False
+env = gym.make("CartPole-v1", render_mode="human")
 
-# while not done:
-    # env.render()
-    # action = new_agent.act(state, eps=0.)
-    # next_state, reward, done, truncated, _ = env.step(action)
-    # state = next_state
-    # time.sleep(0.1)  # Add a delay to make the visualization easier to follow
+for rend in range(10):
+    state = env.reset()[0]
+    done = False
+
+    reward_total = 0
+    while not done:
+        # env.render()
+        action = new_agent.act(state, eps=0.)
+        next_state, reward, done, truncated, _ = env.step(action)
+        reward_total += reward
+        state = next_state
+        # time.sleep(0.1)  # Add a delay to make the visualization easier to follow
+    print(f"render test {rend} reward {reward_total:.2f}")
 
 env.close()
