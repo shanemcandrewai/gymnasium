@@ -121,10 +121,12 @@ from collections import deque
 import random
 
 # Set up the environment
+# env = gym.make("CartPole-v1", render_mode="human")
 env = gym.make("CartPole-v1")
 
 # Define training parameters
-num_episodes = 250
+# num_episodes = 250
+num_episodes = 100
 max_steps_per_episode = 200
 epsilon_start = 1.0
 epsilon_end = 0.2
@@ -145,14 +147,14 @@ new_agent = DQNAgent(input_dim, output_dim, seed=170715, lr = lr)
 # Training loop
 for episode in range(num_episodes):
     # Reset the environment
-    state = env.reset()
+    state = env.reset()[0]
     epsilon = max(epsilon_end, epsilon_start * (epsilon_decay_rate ** episode))
 
     # Run one episode
     for step in range(max_steps_per_episode):
         # Choose and perform an action
         action = new_agent.act(state, epsilon)
-        next_state, reward, done, _ = env.step(action)
+        next_state, reward, done, truncated, _ = env.step(action)
         
         buffer.append((state, action, reward, next_state, done))
         
@@ -175,13 +177,13 @@ test_episodes = 100
 episode_rewards = []
 
 for episode in range(test_episodes):
-    state = env.reset()
+    state = env.reset()[0]
     episode_reward = 0
     done = False
     
     while not done:
         action = new_agent.act(state, eps=0.)
-        next_state, reward, done, _ = env.step(action)
+        next_state, reward, done, truncated, _ = env.step(action)
         episode_reward += reward
         state = next_state
         
@@ -193,14 +195,14 @@ print(f"Average reward over {test_episodes} test episodes: {average_reward:.2f}"
 # Visualize the agent's performance
 import time
 
-state = env.reset()
+state = env.reset()[0]
 done = False
 
-while not done:
-    env.render()
-    action = new_agent.act(state, eps=0.)
-    next_state, reward, done, _ = env.step(action)
-    state = next_state
-    time.sleep(0.1)  # Add a delay to make the visualization easier to follow
+# while not done:
+    # env.render()
+    # action = new_agent.act(state, eps=0.)
+    # next_state, reward, done, truncated, _ = env.step(action)
+    # state = next_state
+    # time.sleep(0.1)  # Add a delay to make the visualization easier to follow
 
 env.close()
