@@ -137,7 +137,7 @@ def optimize_model():
 
 if __name__ == "__main__":
 
-    env = gym.make("CartPole-v1", render_mode="human")
+    env = gym.make("CartPole-v1")
 
     # set up matplotlib
     is_ipython = 'inline' in matplotlib.get_backend()
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     if torch.cuda.is_available() or torch.backends.mps.is_available():
         NUM_EPISODES = 600
     else:
-        NUM_EPISODES = 50
+        NUM_EPISODES = 500
 
     for i_episode in range(NUM_EPISODES):
         # Initialize the environment and get its state
