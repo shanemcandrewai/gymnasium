@@ -24,7 +24,7 @@ buffer = deque(maxlen=BUFFER_SIZE)
 BATCH_SIZE = 128
 UPDATE_FREQUENCY = 10
 
-Experience = namedtuple('Experience', ["state", "action", "reward", "next_state", "done"])
+Experience = namedtuple('Experiencex', ["state", "action", "reward", "next_state", "done"])
 
 # Check if GPU is available
 device = torch.device( "cuda" if torch.cuda.is_available() else "cpu")
@@ -47,38 +47,6 @@ class QNetwork(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-class ReplayBuffer:
-    """replay buffer"""
-    def __init__(self, action_size, buffer_size_l, batch_size_l):
-        self.action_size = action_size
-        self.memory = deque(maxlen=buffer_size_l)
-        self.batch_size = batch_size_l
-        random.seed(SEED)
-
-    def add(self, experience):
-        """add experience"""
-        self.memory.append(experience)
-
-    def sample(self):
-        """sample experience"""
-        experiences = random.sample(self.memory, k=self.batch_size)
-
-        states = torch.from_numpy(np.vstack(
-        [e.state for e in experiences if e is not None])).float().to(device)
-        actions = torch.from_numpy(np.vstack(
-        [e.action for e in experiences if e is not None])).long().to(device)
-        rewards = torch.from_numpy(np.vstack(
-        [e.reward for e in experiences if e is not None])).float().to(device)
-        next_states = torch.from_numpy(np.vstack(
-        [e.next_state for e in experiences if e is not None])).float().to(device)
-        dones = torch.from_numpy(np.vstack(
-        [e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
-
-        return (states, actions, rewards, next_states, dones)
-
-    def __len__(self):
-        return len(self.memory)
-
 # Define the DQN agent class
 class DQNAgent:
     """DQN Agent"""
@@ -92,20 +60,10 @@ class DQNAgent:
         self.qnetwork_target = QNetwork(state_size, action_size).to(device)
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr)
 
-        self.memory = ReplayBuffer(action_size, buffer_size_l=int(1e5), batch_size_l=64)
         self.t_step = 0
 
-    def step(self, experience):
-        """step"""
-        self.memory.add(experience)
 
-        self.t_step = (self.t_step + 1) % 4
-        if self.t_step == 0:
-            if len(self.memory) > 64:
-                experiences = self.memory.sample()
-                self.learn(experiences, gamma=0.99)
-
-    def act(self, state_l, eps=0.):
+    def choose_action(self, state_l, eps=0.):
         """Choose an action based on the current state"""
         state_tensor = torch.from_numpy(state_l).float().unsqueeze(0).to(device)
 
@@ -164,7 +122,7 @@ for episode in range(NUM_EPISODES):
     step = 0
     for step in range(MAX_STEPS_PER_EPISODE):
         # Choose and perform an action
-        action = new_agent.act(state, epsilon)
+        action = new_agent.choose_action(state, epsilon)
         next_state, reward, done, truncated, _ = env.step(action)
 
         buffer.append((state, action, reward, next_state, done))
@@ -193,7 +151,7 @@ for episode in range(NUM_EPISODES):
     # done = False
 
     # while not done:
-        # action = new_agent.act(state, eps=0.)
+        # action = new_agent.choose_action(state, eps=0.)
         # next_state, reward, done, truncated, _ = env.step(action)
         # episode_reward += reward
         # state = next_state
@@ -213,7 +171,7 @@ for rend in range(10):
     reward_total = 0
     while not done:
         # env.render()
-        action = new_agent.act(state, eps=0.)
+        action = new_agent.choose_action(state, eps=0.)
         next_state, reward, done, truncated, _ = env.step(action)
         reward_total += reward
         state = next_state
