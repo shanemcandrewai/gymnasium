@@ -24,6 +24,7 @@ buffer = deque(maxlen=BUFFER_SIZE)
 BATCH_SIZE = 128
 UPDATE_FREQUENCY = 10
 
+Experience = namedtuple('Experience', ["state", "action", "reward", "next_state", "done"])
 
 # Check if GPU is available
 device = torch.device( "cuda" if torch.cuda.is_available() else "cpu")
@@ -52,14 +53,11 @@ class ReplayBuffer:
         self.action_size = action_size
         self.memory = deque(maxlen=buffer_size_l)
         self.batch_size = batch_size_l
-        self.experience = namedtuple(
-        "Experience", field_names=["state", "action", "reward", "next_state", "done"])
         random.seed(SEED)
 
-    def add(self, state_l, action_l, reward_l, next_state_l, done_l):
+    def add(self, experience):
         """add experience"""
-        e = self.experience(state_l, action_l, reward_l, next_state_l, done_l)
-        self.memory.append(e)
+        self.memory.append(experience)
 
     def sample(self):
         """sample experience"""
@@ -97,9 +95,9 @@ class DQNAgent:
         self.memory = ReplayBuffer(action_size, buffer_size_l=int(1e5), batch_size_l=64)
         self.t_step = 0
 
-    def step(self, state, action, reward, next_state, done):
+    def step(self, experience):
         """step"""
-        self.memory.add(state, action, reward, next_state, done)
+        self.memory.add(experience)
 
         self.t_step = (self.t_step + 1) % 4
         if self.t_step == 0:
@@ -107,9 +105,9 @@ class DQNAgent:
                 experiences = self.memory.sample()
                 self.learn(experiences, gamma=0.99)
 
-    def act(self, state, eps=0.):
+    def act(self, state_l, eps=0.):
         """Choose an action based on the current state"""
-        state_tensor = torch.from_numpy(state).float().unsqueeze(0).to(device)
+        state_tensor = torch.from_numpy(state_l).float().unsqueeze(0).to(device)
 
         self.qnetwork_local.eval()
         with torch.no_grad():
