@@ -20,11 +20,13 @@ EPSILON_DECAY_RATE = 0.99
 GAMMA = 0.9
 LR = 0.0025
 BUFFER_SIZE = 10000
-buffer = deque(maxlen=BUFFER_SIZE)
 BATCH_SIZE = 128
 UPDATE_FREQUENCY = 10
 FC1_UNITS = 64
 FC2_UNITS = 64
+TAU = 0.001
+GAME_ID = "CartPole-v1"
+RENDER_GAME = "human"
 
 # Check if GPU is available
 device = torch.device( "cuda" if torch.cuda.is_available() else "cpu")
@@ -95,21 +97,24 @@ class DQNAgent:
         loss.backward()
         self.optimizer.step()
 
-        self.soft_update(self.qnetwork_local, self.qnetwork_target, tau=1e-3)
+        self.soft_update(self.qnetwork_local, self.qnetwork_target)
 
-    def soft_update(self, local_model, target_model, tau):
+    def soft_update(self, local_model, target_model, tau=TAU):
         """soft update"""
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
 
 
 # Set up the environment
-env = gym.make("CartPole-v1")
+env = gym.make("CartPole-v1", MAX_STEPS_PER_EPISODE)
 
 # Initialize the DQNAgent
 input_dim = env.observation_space.shape[0]
 output_dim = env.action_space.n
 new_agent = DQNAgent(input_dim, output_dim, lr = LR)
+
+buffer = deque(maxlen=BUFFER_SIZE)
+
 
 # Training loop
 for episode in range(NUM_EPISODES):
@@ -118,7 +123,8 @@ for episode in range(NUM_EPISODES):
     epsilon = max(EPSILON_END, EPSILON_START * (EPSILON_DECAY_RATE ** episode))
 
     step = 0
-    for step in range(MAX_STEPS_PER_EPISODE):
+    done = False
+    while not done:
         # Choose and perform an action
         action = new_agent.choose_action(state, epsilon)
         next_state, reward, done, truncated, _ = env.step(action)
@@ -131,10 +137,7 @@ for episode in range(NUM_EPISODES):
             new_agent.learn(batch)
 
         state = next_state
-
-        # Check if the episode has ended
-        if done:
-            break
+        step += 1
 
     if (episode + 1) % UPDATE_FREQUENCY == 0:
         print(f"Episode {episode + 1}: Finished training, Steps {step}")
@@ -160,16 +163,14 @@ for episode in range(NUM_EPISODES):
 
 # Visualize the agent's performance
 
-env = gym.make("CartPole-v1", render_mode="human")
+env = gym.make(GAME_ID, render_mode=RENDER_GAME)
 
 for rend in range(2):
     state = env.reset()[0]
-    done = False
-
     reward_total = 0
+    done = False
     while not done:
-        # env.render()
-        action = new_agent.choose_action(state, eps=0.)
+        action = new_agent.choose_action(state)
         next_state, reward, done, truncated, _ = env.step(action)
         reward_total += reward
         state = next_state
