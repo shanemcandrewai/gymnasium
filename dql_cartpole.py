@@ -1,7 +1,7 @@
 """dql_cartpole"""
 # Import necessary libraries
 import random
-from collections import namedtuple, deque
+from collections import deque
 import numpy as np
 import torch
 from torch import nn
@@ -23,8 +23,8 @@ BUFFER_SIZE = 10000
 buffer = deque(maxlen=BUFFER_SIZE)
 BATCH_SIZE = 128
 UPDATE_FREQUENCY = 10
-
-Experience = namedtuple('Experiencex', ["state", "action", "reward", "next_state", "done"])
+FC1_UNITS = 64
+FC2_UNITS = 64
 
 # Check if GPU is available
 device = torch.device( "cuda" if torch.cuda.is_available() else "cpu")
@@ -33,7 +33,7 @@ print(device)
 # Define the neural network model
 class QNetwork(nn.Module):
     """QNetwork"""
-    def __init__(self, state_size, action_size, fc1_units=64, fc2_units=64):
+    def __init__(self, state_size, action_size, fc1_units=FC1_UNITS, fc2_units=FC2_UNITS):
         super().__init__()
         self.seed = torch.manual_seed(SEED)
         self.fc1 = nn.Linear(state_size, fc1_units)
@@ -76,7 +76,7 @@ class DQNAgent:
             return action_values.argmax(dim=1).item()
         return np.random.randint(self.action_size)
 
-    def learn(self, experiences, gamma):
+    def learn(self, experiences, gamma=GAMMA):
         """Learn from batch of experiences"""
         states, actions, rewards, next_states, dones = zip(*experiences)
         states = torch.from_numpy(np.vstack(states)).float().to(device)
@@ -106,7 +106,6 @@ class DQNAgent:
 # Set up the environment
 env = gym.make("CartPole-v1")
 
-
 # Initialize the DQNAgent
 input_dim = env.observation_space.shape[0]
 output_dim = env.action_space.n
@@ -118,7 +117,6 @@ for episode in range(NUM_EPISODES):
     state = env.reset()[0]
     epsilon = max(EPSILON_END, EPSILON_START * (EPSILON_DECAY_RATE ** episode))
 
-    # Run one episode
     step = 0
     for step in range(MAX_STEPS_PER_EPISODE):
         # Choose and perform an action
@@ -130,7 +128,7 @@ for episode in range(NUM_EPISODES):
         if len(buffer) >= BATCH_SIZE:
             batch = random.sample(buffer, BATCH_SIZE)
             # Update the agent's knowledge
-            new_agent.learn(batch, GAMMA)
+            new_agent.learn(batch)
 
         state = next_state
 
@@ -164,7 +162,7 @@ for episode in range(NUM_EPISODES):
 
 env = gym.make("CartPole-v1", render_mode="human")
 
-for rend in range(10):
+for rend in range(2):
     state = env.reset()[0]
     done = False
 
