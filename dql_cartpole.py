@@ -112,7 +112,7 @@ input_dim = env.observation_space.shape[0]
 output_dim = env.action_space.n
 new_agent = DQNAgent(input_dim, output_dim)
 
-buffer = deque(maxlen=BUFFER_SIZE)
+replay_memory = deque(maxlen=BUFFER_SIZE)
 
 # Training loop
 for episode in range(NUM_EPISODES):
@@ -127,10 +127,10 @@ for episode in range(NUM_EPISODES):
         action = new_agent.choose_action(state, epsilon)
         next_state, reward, done, truncated, _ = env.step(action)
 
-        buffer.append((state, action, reward, next_state, done))
+        replay_memory.append((state, action, reward, next_state, done))
 
-        if len(buffer) >= BATCH_SIZE:
-            batch = random.sample(buffer, BATCH_SIZE)
+        if len(replay_memory) >= BATCH_SIZE:
+            batch = random.sample(replay_memory, BATCH_SIZE)
             # Update the agent's knowledge
             new_agent.learn(batch)
 
