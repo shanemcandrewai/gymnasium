@@ -1,5 +1,6 @@
 """Reinforcement Learning (DQN) Tutorial"""
 
+import math
 import random
 import numpy as np
 import torch
@@ -10,11 +11,11 @@ import gymnasium as gym
 
 BATCH_SIZE = 128
 GAMMA = 0.99
-EPSILON_START = 1.0
-EPSILON_END = 0.2
-EPSILON_DECAY_RATE = 0.99
+EPSILON_START = 0.9
+EPSILON_END = 0.01
+EPSILON_DECAY_RATE = 2500
 TAU = 0.001
-LEARNING_RATE = 0.0025
+LEARNING_RATE = 0.0003
 
 SEED=170715
 NUM_TRAINING_EPISODES = 250
@@ -60,17 +61,20 @@ class DQNAgent:
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=LEARNING_RATE, amsgrad=True)
         self.replay_memory = []
 
-    def choose_action(self, state_l, eps=0):
+    def select_action(self, state_l):
         """Choose an action based on the current state"""
         state_tensor = torch.from_numpy(state_l).float().unsqueeze(0).to(device)
+        eps_threshold = EPSILON_END + (EPSILON_START - EPSILON_END) * \
+            math.exp(-1. * steps_done / EPSILON_DECAY_RATE)
 
         self.policy_net.eval()
         with torch.no_grad():
             action_values = self.policy_net(state_tensor)
         self.policy_net.train()
 
-        if np.random.random() > eps:
-            return action_values.argmax(dim=1).item()
+        if np.random.random() > eps_threshold:
+            with torch.no_grad():
+                return policy_net(state).max(1).indices.view(1, 1)
         return np.random.randint(self.output_dim)
 
     def optimize_model(self, transition_samples_l):
@@ -115,7 +119,7 @@ class DQNAgent:
             done = False
             while not done:
                 # Choose and perform an action
-                action = agent.choose_action(state, epsilon)
+                action = agent.select_action(state, epsilon)
                 next_state, reward, done, _, _ = self.env.step(action)
 
                 self.replay_memory.append((state, action, reward, next_state, done))
@@ -141,11 +145,11 @@ class DQNAgent:
             reward_total = 0
             done = False
             while not done:
-                action = agent.choose_action(state)
+                action = agent.select_action(state)
                 next_state, reward, done, _, _ = env.step(action)
                 reward_total += reward
                 state = next_state
-                # time.sleep(0.1)  # Add a delay to make the visualization easier to follow
+                # time.sleep(0.1)  # Add a pdelay to make the visualization easier to follow
             print(f"render test {rend} reward {reward_total:.2f}")
 
         env.close()
