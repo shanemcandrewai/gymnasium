@@ -73,10 +73,15 @@ class DQNAgent:
     def optimize_model(self, transition_samples_l):
         """Learn from a sample batch of experiences"""
         states, actions, rewards, next_states, dones = zip(*transition_samples_l)
-        states = torch.from_numpy(np.vstack(states)).float().to(device)
-        actions = torch.from_numpy(np.vstack(actions)).long().to(device)
+        # states = torch.from_numpy(np.vstack(states)).float().to(device)
+        # actions = torch.from_numpy(np.vstack(actions)).long().to(device)
+        # rewards = torch.from_numpy(np.vstack(rewards)).float().to(device)
+        # next_states = torch.from_numpy(np.vstack(next_states)).float().to(device)
+        # dones = torch.from_numpy(np.vstack(dones).astype(np.uint8)).float().to(device)
+        states = torch.from_numpy(np.asarray(states)).to(device)
+        actions = torch.from_numpy(np.vstack(actions)).to(device)
         rewards = torch.from_numpy(np.vstack(rewards)).float().to(device)
-        next_states = torch.from_numpy(np.vstack(next_states)).float().to(device)
+        next_states = torch.from_numpy(np.asarray(next_states)).to(device)
         dones = torch.from_numpy(np.vstack(dones).astype(np.uint8)).float().to(device)
 
         q_targets_next = self.target_net(next_states).detach().max(1)[0].unsqueeze(1)
@@ -102,7 +107,7 @@ env = gym.make("CartPole-v1", MAX_STEPS_PER_EPISODE, render_mode=SHOW_GAME)
 # Initialize the DQNAgent
 agent = DQNAgent(env)
 
-# replay_memory = deque(maxlen=REPLAY_BUFFER_SIZE)
+# store all action, obvservation data
 replay_memory = []
 
 # Training loop
