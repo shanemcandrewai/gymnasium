@@ -1,7 +1,6 @@
 """dql_cartpole"""
 # Import necessary libraries
 import random
-from collections import deque
 import numpy as np
 import torch
 from torch import nn
@@ -10,16 +9,15 @@ import torch.nn.functional as F
 import gymnasium as gym
 
 SEED=170715
-# Define training parameters
-NUM_EPISODES = 250
-# NUM_EPISODES = 20
+NUM_TRAINING_EPISODES = 250
+# NUM_TRAINING_EPISODES = 20
 MAX_STEPS_PER_EPISODE = 200
 EPSILON_START = 1.0
 EPSILON_END = 0.2
 EPSILON_DECAY_RATE = 0.99
 GAMMA = 0.9
 LEARNING_RATE = 0.0025
-BUFFER_SIZE = 10000
+REPLAY_BUFFER_SIZE = 10000
 BATCH_SIZE = 128
 UPDATE_FREQUENCY = 10
 FC1_UNITS = 64
@@ -27,14 +25,14 @@ FC2_UNITS = 64
 TAU = 0.001
 GAME_ID = "CartPole-v1"
 SHOW_GAME = "human"
+NUM_RENDER_TESTS = 4
 
 # Check if GPU is available
 device = torch.device( "cuda" if torch.cuda.is_available() else "cpu")
 print(f"Device detected: {device}")
 
-# Define the neural network model
-class QNetwork(nn.Module):
-    """QNetwork"""
+class DNQ(nn.Module):
+    """Deep Q network"""
     def __init__(self, state_size, action_size):
         super().__init__()
         self.seed = torch.manual_seed(SEED)
@@ -49,55 +47,49 @@ class QNetwork(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-# Define the DQN agent class
 class DQNAgent:
-    """DQN Agent"""
-    # Initialize the DQN agent
-    def __init__(self, state_size, action_size):
-        self.state_size = state_size
-        self.action_size = action_size
+    """Deep Q network Agent"""
+    def __init__(self, env_l):
+        self.input_dim = env_l.observation_space.shape[0]
+        self.output_dim = env_l.action_space.n
         random.seed(SEED)
-
-        self.qnetwork_local = QNetwork(state_size, action_size).to(device)
-        self.qnetwork_target = QNetwork(state_size, action_size).to(device)
-        self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LEARNING_RATE)
-
-        self.t_step = 0
-
+        self.policy_net = DNQ(self.input_dim, self.output_dim).to(device)
+        self.target_net = DNQ(self.input_dim, self.output_dim).to(device)
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=LEARNING_RATE)
 
     def choose_action(self, state_l, eps=0):
         """Choose an action based on the current state"""
         state_tensor = torch.from_numpy(state_l).float().unsqueeze(0).to(device)
 
-        self.qnetwork_local.eval()
+        self.policy_net.eval()
         with torch.no_grad():
-            action_values = self.qnetwork_local(state_tensor)
-        self.qnetwork_local.train()
+            action_values = self.policy_net(state_tensor)
+        self.policy_net.train()
 
         if np.random.random() > eps:
             return action_values.argmax(dim=1).item()
-        return np.random.randint(self.action_size)
+        return np.random.randint(self.output_dim)
 
-    def learn(self, experiences):
-        """Learn from batch of experiences"""
-        states, actions, rewards, next_states, dones = zip(*experiences)
+    def optimize_model(self, transition_samples_l):
+        """Learn from a sample batch of experiences"""
+        states, actions, rewards, next_states, dones = zip(*transition_samples_l)
         states = torch.from_numpy(np.vstack(states)).float().to(device)
         actions = torch.from_numpy(np.vstack(actions)).long().to(device)
         rewards = torch.from_numpy(np.vstack(rewards)).float().to(device)
         next_states = torch.from_numpy(np.vstack(next_states)).float().to(device)
         dones = torch.from_numpy(np.vstack(dones).astype(np.uint8)).float().to(device)
 
-        q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
+        q_targets_next = self.target_net(next_states).detach().max(1)[0].unsqueeze(1)
         q_targets = rewards + (GAMMA * q_targets_next * (1 - dones))
 
-        q_expected = self.qnetwork_local(states).gather(1, actions)
+        q_expected = self.policy_net(states).gather(1, actions)
 
         loss = F.mse_loss(q_expected, q_targets)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
-        self.soft_update(self.qnetwork_local, self.qnetwork_target)
+        self.soft_update(self.policy_net, self.target_net)
 
     def soft_update(self, local_model, target_model):
         """soft update"""
@@ -105,17 +97,16 @@ class DQNAgent:
             target_param.data.copy_(TAU * local_param.data + (1.0 - TAU) * target_param.data)
 
 # Set up the environment
-env = gym.make("CartPole-v1", MAX_STEPS_PER_EPISODE)
+env = gym.make("CartPole-v1", MAX_STEPS_PER_EPISODE, render_mode=SHOW_GAME)
 
 # Initialize the DQNAgent
-input_dim = env.observation_space.shape[0]
-output_dim = env.action_space.n
-new_agent = DQNAgent(input_dim, output_dim)
+agent = DQNAgent(env)
 
-replay_memory = deque(maxlen=BUFFER_SIZE)
+# replay_memory = deque(maxlen=REPLAY_BUFFER_SIZE)
+replay_memory = []
 
 # Training loop
-for episode in range(NUM_EPISODES):
+for episode in range(NUM_TRAINING_EPISODES):
     # Reset the environment
     state = env.reset()[0]
     epsilon = max(EPSILON_END, EPSILON_START * (EPSILON_DECAY_RATE ** episode))
@@ -124,15 +115,15 @@ for episode in range(NUM_EPISODES):
     done = False
     while not done:
         # Choose and perform an action
-        action = new_agent.choose_action(state, epsilon)
+        action = agent.choose_action(state, epsilon)
         next_state, reward, done, truncated, _ = env.step(action)
 
         replay_memory.append((state, action, reward, next_state, done))
 
         if len(replay_memory) >= BATCH_SIZE:
-            batch = random.sample(replay_memory, BATCH_SIZE)
+            transition_samples = random.sample(replay_memory, BATCH_SIZE)
             # Update the agent's knowledge
-            new_agent.learn(batch)
+            agent.optimize_model(transition_samples)
 
         state = next_state
         step += 1
@@ -141,14 +132,15 @@ for episode in range(NUM_EPISODES):
         print(f"Episode {episode + 1}: Finished training, Steps {step}")
 
 # Render test
+input('Please a key to start the render test')
 env = gym.make(GAME_ID, render_mode=SHOW_GAME)
 
-for rend in range(2):
+for rend in range(NUM_RENDER_TESTS):
     state = env.reset()[0]
     reward_total = 0
     done = False
     while not done:
-        action = new_agent.choose_action(state)
+        action = agent.choose_action(state)
         next_state, reward, done, truncated, _ = env.step(action)
         reward_total += reward
         state = next_state
