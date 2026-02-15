@@ -1,0 +1,7 @@
+Project,Reinforcement Learning (DQN) Tutorial,Balancing a CartPole System with Reinforcement Learning - A Tut,Balancing a CartPole System with Reinforcement Learning - A Tut,Deep Q-Network (DQN) for CartPole
+Paper,https://arxiv.org/abs/1312.5602,https://arxiv.org/pdf/2006.04938,https://arxiv.org/pdf/2006.04938,
+File,cartpole_v1_dqn,cartpole_d3qn_per-v2,cartpole_dqnv2,dql-cartpole.py
+URL,https://github.com/pytorch/tutorials/blob/main/beginner_source/basics/quickstart_tutorial.py,https://github.com/swagatk/RL-Projects-SK/blob/master/src/CartPole/DQN/cartpole_d3qn_per-v2.py,https://github.com/swagatk/RL-Projects-SK/blob/master/src/CartPole/DQN/cartpole_dqnv2.py,https://github.com/SeeknnDestroy/DQN-CartPole/blob/master/dql-cartpole.ipynb
+loss function,Huber loss nn.SmoothL1Loss(,mean_squared_error,mse,mse_loss
+optimizer,"optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)","RMSprop(lr=0.00025, rho=0.95, epsilon=0.01), metrics=[""accuracy""])",Adam(lr=self.learning_rate)),"optim.Adam(self.qnetwork_local.parameters(), lr)"
+model,3 x Linear,3 x Dense,3 x Dense,3 x Linear
