@@ -1,18 +1,6 @@
-<<<<<<< HEAD
-<<<<<<< HEAD:dql_cartpole.py
-"""dql_cartpole"""
-# Import necessary libraries
-# https://github.com/SeeknnDestroy/DQN-CartPole/blob/master/dql-cartpole.ipynb
-=======
 """Reinforcement Learning (DQN) Tutorial"""
 
 import math
->>>>>>> pytorch-tutorial-dqn:cartpole_rf_dqn.py
-=======
-"""Reinforcement Learning (DQN) Tutorial"""
-
-import math
->>>>>>> pytorch-tutorial-dqn
 import random
 import numpy as np
 import torch
