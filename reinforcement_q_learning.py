@@ -416,8 +416,7 @@ def run():
     # Get number of actions from gym action space
     n_actions = env.action_space.n
     # Get the number of state observations
-    state, _ = env.reset()
-    n_observations = len(state)
+    n_observations = env.observation_space.shape[0]
 
     policy_net = DQN(n_observations, n_actions).to(device)
     target_net = DQN(n_observations, n_actions).to(device)
@@ -441,7 +440,6 @@ def run():
             action, steps_done = select_action(policy_net, state,  steps_done)
             observation, reward, terminated, truncated, _ = env.step(action.item())
             reward = torch.tensor([reward], device=device)
-            done = terminated or truncated
 
             if terminated:
                 next_state = None
@@ -468,7 +466,7 @@ def run():
                     key]*TAU + target_net_state_dict[key]*(1-TAU)
             target_net.load_state_dict(target_net_state_dict)
 
-            if done:
+            if terminated or truncated:
                 episode_durations.append(t + 1)
                 plot_durations()
                 break
