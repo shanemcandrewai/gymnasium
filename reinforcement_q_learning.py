@@ -73,9 +73,12 @@ from torch import nn
 from  torch import optim
 import gymnasium as gym
 
+GAME_ID = "CartPole-v1"
+SHOW_GAME = "human"
+MAX_STEPS_PER_EPISODE = 500
 
-
-env = gym.make("CartPole-v1")
+env = gym.make(GAME_ID, MAX_STEPS_PER_EPISODE, render_mode=SHOW_GAME)
+# env = gym.make(GAME_ID, MAX_STEPS_PER_EPISODE)
 
 # set up matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
@@ -423,65 +426,58 @@ def optimize_model():
 # can produce better results if convergence is not observed.
 #
 
-if torch.cuda.is_available() or torch.backends.mps.is_available():
-    NUM_EPISODES = 600
-    # NUM_EPISODES = 200
-else:
-    NUM_EPISODES = 50
+def run():
+    """Training and plotting"""
+    if torch.cuda.is_available() or torch.backends.mps.is_available():
+        num_episodes = 600
+        # num_episodes = 200
+    else:
+        num_episodes = 50
 
-steps_done = 0
-for i_episode in range(NUM_EPISODES):
-    # Initialize the environment and get its state
-    state, info = env.reset()
-    state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-    for t in count():
-        action, steps_done = select_action(state, steps_done)
-        observation, reward, terminated, truncated, _ = env.step(action.item())
-        reward = torch.tensor([reward], device=device)
-        done = terminated or truncated
+    steps_done = 0
+    for _ in range(num_episodes):
+        # Initialize the environment and get its state
+        state_l, _ = env.reset()
+        state_l = torch.tensor(state_l, dtype=torch.float32, device=device).unsqueeze(0)
+        for t in count():
+            action, steps_done = select_action(state_l, steps_done)
+            observation, reward, terminated, truncated, _ = env.step(action.item())
+            reward = torch.tensor([reward], device=device)
+            done = terminated or truncated
 
-        if terminated:
-            NEXT_STATE = None
-        else:
-            NEXT_STATE = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
+            if terminated:
+                next_state = None
+            else:
+                next_state = torch.tensor(
+                observation, dtype=torch.float32, device=device).unsqueeze(0)
 
-        # Store the transition in memory
-        memory.push(state, action, NEXT_STATE, reward)
+            # Store the transition in memory
+            memory.push(state_l, action, next_state, reward)
 
-        # Move to the next state
-        state = NEXT_STATE
+            # Move to the next state
+            state_l = next_state
 
-        # Perform one step of the optimization (on the policy network)
-        optimize_model()
+            # Perform one step of the optimization (on the policy network)
+            optimize_model()
 
-        # Soft update of the target network's weights
-        # θ′ ← τ θ + (1 −τ )θ′
-        target_net_state_dict = target_net.state_dict()
-        policy_net_state_dict = policy_net.state_dict()
-        for key in policy_net_state_dict:
-            target_net_state_dict[key] = policy_net_state_dict[
-                key]*TAU + target_net_state_dict[key]*(1-TAU)
-        target_net.load_state_dict(target_net_state_dict)
+            # Soft update of the target network's weights
+            # θ′ ← τ θ + (1 −τ )θ′
+            target_net_state_dict = target_net.state_dict()
+            policy_net_state_dict = policy_net.state_dict()
+            for key in policy_net_state_dict:
+                target_net_state_dict[key] = policy_net_state_dict[
+                    key]*TAU + target_net_state_dict[key]*(1-TAU)
+            target_net.load_state_dict(target_net_state_dict)
 
-        if done:
-            episode_durations.append(t + 1)
-            plot_durations()
-            break
+            if done:
+                episode_durations.append(t + 1)
+                plot_durations()
+                break
 
-print('Complete')
-plot_durations(show_result=True)
-plt.ioff()
-plt.show()
+    print('Complete')
+    plot_durations(show_result=True)
+    plt.ioff()
+    plt.show()
 
-######################################################################
-# Here is the diagram that illustrates the overall resulting data flow.
-#
-# .. figure:: /_static/img/reinforcement_learning_diagram.jpg
-#
-# Actions are chosen either randomly or based on a policy, getting the next
-# step sample from the gym environment. We record the results in the
-# replay memory and also run optimization step on every iteration.
-# Optimization picks a random batch from the replay memory to do training of the
-# new policy. The "older" target_net is also used in optimization to compute the
-# expected Q values. A soft update of its weights are performed at every step.
-#
+if __name__ == "__main__":
+    run()
