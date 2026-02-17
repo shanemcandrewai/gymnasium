@@ -112,7 +112,7 @@ agent = BlackjackAgent(
 
 for episode in tqdm(range(N_EPISODES)):
     # Start a new hand
-    obs, info = env.reset()
+    obs, _ = env.reset()
     done = False
 
     # Play one complete hand
@@ -121,7 +121,7 @@ for episode in tqdm(range(N_EPISODES)):
         action = agent.get_action(obs)
 
         # Take action and observe result
-        next_obs, reward, terminated, truncated, info = env.step(action)
+        next_obs, reward, terminated, truncated, _ = env.step(action)
 
         # Learn from this experience
         agent.update(Experience(obs, action, reward, terminated, next_obs))
