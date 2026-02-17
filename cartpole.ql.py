@@ -6,6 +6,9 @@ from matplotlib import pyplot as plt
 import numpy as np
 import gymnasium as gym
 
+GAME_ID = "CartPole-v1"
+SHOW_GAME = "human"
+MAX_STEPS_PER_EPISODE = 500
 # Training hyperparameters
 LEARNING_RATE = 0.01        # How fast to learn (higher = faster but less stable)
 N_EPISODES = 100_000        # Number of hands to practice
@@ -63,7 +66,7 @@ class BlackjackAgent:
 
         # With probability (1-epsilon): exploit (best known action)
 
-        return int(np.argmax(self.q_values[obs_l]))
+        return int(np.argmax(self.q_values[tuple(obs_l)]))
 
     def update(
         self,
@@ -75,18 +78,19 @@ class BlackjackAgent:
         """
         # What's the best we could do from the next state?
         # (Zero if episode terminated - no future rewards possible)
-        future_q_value = (not experience.terminated) * np.max(self.q_values[experience.next_obs])
+        future_q_value = (not experience.terminated) * np.max(self.q_values[
+        tuple(experience.next_obs)])
 
         # What should the Q-value be? (Bellman equation)
         target = experience.reward + self.hyper_params.discount_factor * future_q_value
 
         # How wrong was our current estimate?
-        temporal_difference = target - self.q_values[experience.obs][experience.action]
+        temporal_difference = target - self.q_values[tuple(experience.obs)][experience.action]
 
         # Update our estimate in the direction of the error
         # Learning rate controls how big steps we take
-        self.q_values[experience.obs][experience.action] = (
-            self.q_values[experience.obs][
+        self.q_values[tuple(experience.obs)][experience.action] = (
+            self.q_values[tuple(experience.obs)][
             experience.action] + self.hyper_params.learning_rate * temporal_difference
         )
 
@@ -111,7 +115,7 @@ def get_moving_avgs(arr, window, convolution_mode):
 
 def run():
     """Create environment and agent"""
-    env_l = gym.make("Blackjack-v1", sab=False)
+    env_l = gym.make(GAME_ID, MAX_STEPS_PER_EPISODE)
     env_l = gym.wrappers.RecordEpisodeStatistics(env_l, buffer_length=N_EPISODES)
 
     agent_l = BlackjackAgent(
