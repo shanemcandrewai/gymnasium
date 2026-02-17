@@ -1,7 +1,7 @@
 """ Blackjack-v1
 https://gymnasium.farama.org/introduction/train_agent/
 """
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from tqdm import tqdm  # Progress bar
 from matplotlib import pyplot as plt
 import numpy as np
@@ -10,20 +10,22 @@ import gymnasium as gym
 # Training hyperparameters
 LEARNING_RATE = 0.01        # How fast to learn (higher = faster but less stable)
 N_EPISODES = 100_000        # Number of hands to practice
-START_EPSILON = 1.0         # Start with 100% random actions
-EPSILON_DECAY = START_EPSILON / (N_EPISODES / 2)  # Reduce exploration over time
+INITIAL_EPSILON = 1.0         # Start with 100% random actions
+EPSILON_DECAY = INITIAL_EPSILON / (N_EPISODES / 2)  # Reduce exploration over time
 FINAL_EPSILON = 0.1         # Always keep some exploration
+DISCOUNT_FACTOR = 0.95
+
+# types
+HyperParams = namedtuple('HyperParams', [
+'learning_rate', 'initial_epsilon', 'epsilon_decay', 'final_epsilon', 'discount_factor'])
+Experience = namedtuple('Experience', ['obs', 'action', 'reward', 'terminated', 'next_obs'])
 
 class BlackjackAgent:
     """Back jack agent"""
     def __init__(
         self,
         env_l: gym.Env,
-        learning_rate: float,
-        initial_epsilon: float,
-        epsilon_decay: float,
-        final_epsilon: float,
-        discount_factor: float = 0.95,
+        hyper_params: HyperParams,
     ):
         """Initialize a Q-Learning agent.
 
@@ -41,13 +43,10 @@ class BlackjackAgent:
         # defaultdict automatically creates entries with zeros for new states
         self.q_values = defaultdict(lambda: np.zeros(env.action_space.n))
 
-        self.lr = learning_rate
-        self.discount_factor = discount_factor  # How much we care about future rewards
-
+        # How much we care about future rewards
         # Exploration parameters
-        self.epsilon = initial_epsilon
-        self.epsilon_decay = epsilon_decay
-        self.final_epsilon = final_epsilon
+        self.hyper_params = hyper_params
+        self.epsilon = hyper_params.initial_epsilon
 
         # Track learning progress
         self.training_error = []
@@ -68,11 +67,7 @@ class BlackjackAgent:
 
     def update(
         self,
-        obs_l: tuple[int, int, bool],
-        action_l: int,
-        reward_l: float,
-        terminated_l: bool,
-        next_obs_l: tuple[int, int, bool],
+        experience : Experience
     ):
         """Update Q-value based on experience.
 
@@ -80,18 +75,19 @@ class BlackjackAgent:
         """
         # What's the best we could do from the next state?
         # (Zero if episode terminated - no future rewards possible)
-        future_q_value = (not terminated_l) * np.max(self.q_values[next_obs_l])
+        future_q_value = (not experience.terminated) * np.max(self.q_values[experience.next_obs])
 
         # What should the Q-value be? (Bellman equation)
-        target = reward_l + self.discount_factor * future_q_value
+        target = experience.reward + self.hyper_params.discount_factor * future_q_value
 
         # How wrong was our current estimate?
-        temporal_difference = target - self.q_values[obs_l][action_l]
+        temporal_difference = target - self.q_values[experience.obs][experience.action]
 
         # Update our estimate in the direction of the error
         # Learning rate controls how big steps we take
-        self.q_values[obs_l][action_l] = (
-            self.q_values[obs_l][action_l] + self.lr * temporal_difference
+        self.q_values[experience.obs][experience.action] = (
+            self.q_values[experience.obs][
+            experience.action] + self.hyper_params.learning_rate * temporal_difference
         )
 
         # Track learning progress (useful for debugging)
@@ -99,13 +95,9 @@ class BlackjackAgent:
 
     def decay_epsilon(self):
         """Reduce exploration rate after each episode."""
-        self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_decay)
-
-
-
-
-
-
+        self.epsilon = max(
+        self.hyper_params.final_epsilon, self.epsilon -
+        self.hyper_params.epsilon_decay)
 
 
 # Create environment and agent
@@ -114,13 +106,9 @@ env = gym.wrappers.RecordEpisodeStatistics(env, buffer_length=N_EPISODES)
 
 agent = BlackjackAgent(
     env_l=env,
-    learning_rate=LEARNING_RATE,
-    initial_epsilon=START_EPSILON,
-    epsilon_decay=EPSILON_DECAY,
-    final_epsilon=FINAL_EPSILON,
+    hyper_params=HyperParams(
+    LEARNING_RATE, INITIAL_EPSILON, EPSILON_DECAY, FINAL_EPSILON, DISCOUNT_FACTOR)
 )
-
-
 
 for episode in tqdm(range(N_EPISODES)):
     # Start a new hand
@@ -136,7 +124,7 @@ for episode in tqdm(range(N_EPISODES)):
         next_obs, reward, terminated, truncated, info = env.step(action)
 
         # Learn from this experience
-        agent.update(obs, action, reward, terminated, next_obs)
+        agent.update(Experience(obs, action, reward, terminated, next_obs))
 
         # Move to next state
         done = terminated or truncated
@@ -144,8 +132,6 @@ for episode in tqdm(range(N_EPISODES)):
 
     # Reduce exploration rate (agent becomes less random over time)
     agent.decay_epsilon()
-
-
 
 
 def get_moving_avgs(arr, window, convolution_mode):
