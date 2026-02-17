@@ -75,7 +75,6 @@ import gymnasium as gym
 
 GAME_ID = "CartPole-v1"
 SHOW_GAME = "human"
-MAX_STEPS_PER_EPISODE = 500
 
 # BATCH_SIZE is the number of transitions sampled from the replay buffer
 # GAMMA is the discount factor as mentioned in the previous section
@@ -93,8 +92,8 @@ EPS_DECAY = 2500
 TAU = 0.005
 LR = 3e-4
 
-env = gym.make(GAME_ID, MAX_STEPS_PER_EPISODE, render_mode=SHOW_GAME)
-# env = gym.make(GAME_ID, MAX_STEPS_PER_EPISODE)
+env = gym.make(GAME_ID, render_mode=SHOW_GAME)
+# env = gym.make(GAME_ID)
 
 # set up matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
