@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Blackjack-v1 https://gymnasium.farama.org/introduction/train_agent/"""
+"""Blackjack-v1 cleaned up https://gymnasium.farama.org/introduction/train_agent/"""
 from collections import defaultdict, namedtuple
 from tqdm import tqdm  # Progress bar
 from matplotlib import pyplot as plt
 import numpy as np
 import gymnasium as gym
+
+GAME_ID = "Blackjack-v1"
+SHOW_GAME = "human"
+MAX_STEPS_PER_EPISODE = 500
 
 # Training hyperparameters
 LEARNING_RATE = 0.01        # How fast to learn (higher = faster but less stable)
@@ -111,7 +115,7 @@ def get_moving_avgs(arr, window, convolution_mode):
 
 def run():
     """Create environment and agent"""
-    env_l = gym.make("Blackjack-v1", sab=False)
+    env_l = gym.make(GAME_ID)
     env_l = gym.wrappers.RecordEpisodeStatistics(env_l, buffer_length=N_EPISODES)
 
     agent_l = BlackjackAgent(
