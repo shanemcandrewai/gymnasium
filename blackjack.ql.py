@@ -7,8 +7,6 @@ import numpy as np
 import gymnasium as gym
 
 GAME_ID = "Blackjack-v1"
-SHOW_GAME = "human"
-MAX_STEPS_PER_EPISODE = 500
 
 # Training hyperparameters
 LEARNING_RATE = 0.01        # How fast to learn (higher = faster but less stable)
