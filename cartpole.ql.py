@@ -71,10 +71,9 @@ class CartPoleAgent:
         self,
         experience : Experience
     ):
-        """Update Q-value based on experience.
+        """Update Q-value based on experience"""
 
-        This is the heart of Q-learning: learn from (state, action, reward, next_state)
-        """
+        # This is the heart of Q-learning: learn from (state, action, reward, next_state)
         # What's the best we could do from the next state?
         # (Zero if episode terminated - no future rewards possible)
         future_q_value = (not experience.terminated) * np.max(self.q_values[experience.next_obs])
@@ -117,6 +116,30 @@ def init():
     env = gym.wrappers.RecordEpisodeStatistics(env, buffer_length=N_EPISODES)
     return env
 
+def calcuate_bins(env):
+    """Calculate bins for action spaces"""
+    cart_pos_min = env.observation_space.low[0]
+    cart_vel_min = -3
+    pole_ang_min = env.observation_space.low[2]
+    pole_ang_vel_min = -10
+    cart_pos_max = env.observation_space.high[0]
+    cart_vel_max = 3
+    pole_ang_max = env.observation_space.high[2]
+    pole_ang_vel_max = 10
+
+    num_bins = 30
+
+    return np.linspace(cart_pos_min, cart_pos_max, num_bins), np.linspace(
+    cart_vel_min, cart_vel_max, num_bins), np.linspace(
+    pole_ang_min, pole_ang_max, num_bins), np.linspace(
+    pole_ang_vel_min, pole_ang_vel_max, num_bins)
+
+def quantize(obs, obs_bins):
+    """Quantize action spaces"""
+    return np.digitize(obs[0], obs_bins[0]), np.digitize(
+    obs[1], obs_bins[1]), np.digitize(obs[2], obs_bins[2]),np.digitize(
+    obs[3], obs_bins[3])
+
 def learn(env):
     """Create agent, start learning"""
 
@@ -126,27 +149,30 @@ def learn(env):
         LEARNING_RATE, INITIAL_EPSILON, EPSILON_DECAY, FINAL_EPSILON, DISCOUNT_FACTOR)
     )
 
+    obs_bins = calcuate_bins(env)
+
     for _ in tqdm(range(N_EPISODES)):
         # Start a new hand
         obs, _ = env.reset()
-        obs = tuple(obs)
+        obs_quant = quantize(obs, obs_bins)
+
         done = False
 
         # Play one complete hand
         while not done:
             # Agent chooses action (initially random, gradually more intelligent)
-            action = agent.get_action(obs)
+            action = agent.get_action(obs_quant)
 
             # Take action and observe result
             next_obs, reward, terminated, truncated, _ = env.step(action)
-            next_obs = tuple(next_obs)
+            next_obs_quant = quantize(next_obs, obs_bins)
 
             # Learn from this experience
-            agent.update(Experience(obs, action, reward, terminated, next_obs))
+            agent.update(Experience(obs_quant, action, reward, terminated, next_obs_quant))
 
             # Move to next state
             done = terminated or truncated
-            obs = next_obs
+            obs_quant = next_obs_quant
 
         # Reduce exploration rate (agent becomes less random over time)
         agent.decay_epsilon()
