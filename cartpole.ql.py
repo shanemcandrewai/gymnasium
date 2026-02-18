@@ -11,7 +11,7 @@ GAME_ID = "CartPole-v1"
 
 # Training hyperparameters
 LEARNING_RATE = 0.01        # How fast to learn (higher = faster but less stable)
-N_EPISODES = 100000        # Number of hands to practice
+N_EPISODES = 100000         # Number of hands to practice
 INITIAL_EPSILON = 1.0       # Start with 100% random actions
 EPSILON_DECAY = INITIAL_EPSILON / (N_EPISODES / 2)  # Reduce exploration over time
 FINAL_EPSILON = 0.1         # Always keep some exploration
@@ -75,10 +75,11 @@ class CartPoleAgent:
         qnp_min = qnp.min(0)
         qnp_max = qnp.max(0)
 
+        with open('q_values.pickle', 'wb') as f:
+            pickle.dump(dict(self.q_values), f, pickle.HIGHEST_PROTOCOL)
+
         with open('q_values.txt', 'w', encoding="utf-8") as f:
             f.write(str(self.q_values))
-        with open('q_values.pickle', 'wb') as f:
-            pickle.dump(self.q_values, f, pickle.HIGHEST_PROTOCOL)
 
         return QvalueInfo(qnp_min[0], qnp_min[1], qnp_min[2], qnp_min[3], qnp_max[
         0], qnp_max[1], qnp_max[2], qnp_max[3])
