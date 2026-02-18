@@ -55,7 +55,7 @@ class CartPoleAgent:
                 self.q_values = defaultdict(
                 lambda: np.zeros(self.env.action_space.n), pickle.load(f))
                 self.epsilon = hyper_params.final_epsilon
-        except IOError:
+        except (OSError, TypeError):
             self.q_values = defaultdict(lambda: np.zeros(self.env.action_space.n))
             self.epsilon = hyper_params.initial_epsilon
 
@@ -85,8 +85,11 @@ class CartPoleAgent:
         qnp_min = qnp.min(0)
         qnp_max = qnp.max(0)
 
-        with open(self.q_values_file, 'wb') as f:
-            pickle.dump(dict(self.q_values), f, pickle.HIGHEST_PROTOCOL)
+        try:
+            with open(self.q_values_file, 'wb') as f:
+                pickle.dump(dict(self.q_values), f, pickle.HIGHEST_PROTOCOL)
+        except (OSError, TypeError):
+            pass
 
         return QvalueInfo(qnp_min[0], qnp_min[1], qnp_min[2], qnp_min[3], qnp_max[
         0], qnp_max[1], qnp_max[2], qnp_max[3])
