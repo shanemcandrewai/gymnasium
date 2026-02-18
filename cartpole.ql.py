@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """CartPole-v1 cleaned up and adapted https://gymnasium.farama.org/introduction/train_agent/"""
 from collections import defaultdict, namedtuple
+import pickle
 from tqdm import tqdm  # Progress bar
 from matplotlib import pyplot as plt
 import numpy as np
@@ -10,7 +11,7 @@ GAME_ID = "CartPole-v1"
 
 # Training hyperparameters
 LEARNING_RATE = 0.01        # How fast to learn (higher = faster but less stable)
-N_EPISODES = 100_000        # Number of hands to practice
+N_EPISODES = 100000        # Number of hands to practice
 INITIAL_EPSILON = 1.0       # Start with 100% random actions
 EPSILON_DECAY = INITIAL_EPSILON / (N_EPISODES / 2)  # Reduce exploration over time
 FINAL_EPSILON = 0.1         # Always keep some exploration
@@ -21,6 +22,9 @@ ROLLING_LENGTH = 500        #matplotlib Smooth over a 500-episode window
 HyperParams = namedtuple('HyperParams', [
 'learning_rate', 'initial_epsilon', 'epsilon_decay', 'final_epsilon', 'discount_factor'])
 Experience = namedtuple('Experience', ['obs', 'action', 'reward', 'terminated', 'next_obs'])
+QvalueInfo = namedtuple('QvalueInfo', [
+'cart_pos_min', 'cart_vel_min', 'pole_ang_min', 'pole_ang_vel_min', 'cart_pos_max', \
+'cart_vel_max', 'pole_ang_max', 'pole_ang_vel_max'])
 
 class CartPoleAgent:
     """Cart Pole agent"""
@@ -53,7 +57,7 @@ class CartPoleAgent:
         # Track learning progress
         self.training_error = []
 
-    def get_action(self, obs_l: tuple[int, int, bool]) -> int:
+    def get_action(self, obs: tuple[int, int, bool]) -> int:
         """Choose an action using epsilon-greedy strategy.
 
         Returns:
@@ -65,7 +69,21 @@ class CartPoleAgent:
 
         # With probability (1-epsilon): exploit (best known action)
 
-        return int(np.argmax(self.q_values[obs_l]))
+        return int(np.argmax(self.q_values[obs]))
+
+    def get_info(self):
+        """return Q-value stats"""
+        qnp = np.array(list(self.q_values))
+        qnp_min = qnp.min(0)
+        qnp_max = qnp.max(0)
+
+        with open('q_values.txt', 'w', encoding="utf-8") as f:
+            f.write(str(self.q_values))
+        with open('q_values.pickle', 'wb') as f:
+            pickle.dump(self.q_values, f, pickle.HIGHEST_PROTOCOL)
+
+        return QvalueInfo(qnp_min[0], qnp_min[1], qnp_min[2], qnp_min[3], qnp_max[
+        0], qnp_max[1], qnp_max[2], qnp_max[3])
 
     def update(
         self,
@@ -120,18 +138,18 @@ def calcuate_bins():
     """Calculate bins for action spaces"""
     # cart_pos_min = env.observation_space.low[0]
     cart_pos_min = -2.4
-    cart_vel_min = -3
+    cart_vel_min = -3.8
     # pole_ang_min = env.observation_space.low[2]
     pole_ang_min = -.2095
-    pole_ang_vel_min = -5
+    pole_ang_vel_min = -3.5
     # cart_pos_max = env.observation_space.high[0]
     cart_pos_max = 2.4
-    cart_vel_max = 3
+    cart_vel_max = 3.8
     # pole_ang_max = env.observation_space.high[2]
     pole_ang_max = .2095
-    pole_ang_vel_max = 5
+    pole_ang_vel_max = 3.5
 
-    num_bins = 5
+    num_bins = 7
 
     return np.linspace(cart_pos_min, cart_pos_max, num_bins), np.linspace(
     cart_vel_min, cart_vel_max, num_bins), np.linspace(
@@ -180,6 +198,9 @@ def learn(env):
 
         # Reduce exploration rate (agent becomes less random over time)
         agent.decay_epsilon()
+    print(agent.get_info())
+
+
     return env, agent
 
 def plot(env, agent):
