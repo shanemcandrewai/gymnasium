@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """CartPole-v1 cleaned up and adapted https://gymnasium.farama.org/introduction/train_agent/"""
+import argparse
 from collections import defaultdict, namedtuple
 import pickle
 from tqdm import tqdm  # Progress bar
@@ -11,7 +12,7 @@ GAME_ID = "CartPole-v1"
 
 # Training hyperparameters
 LEARNING_RATE = 0.01        # How fast to learn (higher = faster but less stable)
-N_EPISODES = 100000         # Number of hands to practice
+N_EPISODES = 10000         # Number of hands to practice
 INITIAL_EPSILON = 1.0       # Start with 100% random actions
 EPSILON_DECAY = INITIAL_EPSILON / (N_EPISODES / 2)  # Reduce exploration over time
 FINAL_EPSILON = 0.1         # Always keep some exploration
@@ -32,6 +33,7 @@ class CartPoleAgent:
         self,
         env: gym.Env,
         hyper_params: HyperParams,
+        q_values_file=None
     ):
         """Initialize a Q-Learning agent.
         Args:
@@ -41,17 +43,25 @@ class CartPoleAgent:
             epsilon_decay: How much to reduce epsilon each episode
             final_epsilon: Minimum exploration rate (usually 0.1)
             discount_factor: How much to value future rewards (0-1)
+            discount_factor: How much to value future rewards (0-1)
         """
         self.env = env
+        self.q_values_file = q_values_file
 
         # Q-table: maps (state, action) to expected reward
         # defaultdict automatically creates entries with zeros for new states
-        self.q_values = defaultdict(lambda: np.zeros(self.env.action_space.n))
+        try:
+            with open(q_values_file, 'rb') as f:
+                self.q_values = defaultdict(
+                lambda: np.zeros(self.env.action_space.n), pickle.load(f))
+                self.epsilon = hyper_params.final_epsilon
+        except IOError:
+            self.q_values = defaultdict(lambda: np.zeros(self.env.action_space.n))
+            self.epsilon = hyper_params.initial_epsilon
 
         # How much we care about future rewards
         # Exploration parameters
         self.hyper_params = hyper_params
-        self.epsilon = hyper_params.initial_epsilon
 
         # Track learning progress
         self.training_error = []
@@ -75,11 +85,8 @@ class CartPoleAgent:
         qnp_min = qnp.min(0)
         qnp_max = qnp.max(0)
 
-        with open('q_values.pickle', 'wb') as f:
+        with open(self.q_values_file, 'wb') as f:
             pickle.dump(dict(self.q_values), f, pickle.HIGHEST_PROTOCOL)
-
-        with open('q_values.txt', 'w', encoding="utf-8") as f:
-            f.write(str(self.q_values))
 
         return QvalueInfo(qnp_min[0], qnp_min[1], qnp_min[2], qnp_min[3], qnp_max[
         0], qnp_max[1], qnp_max[2], qnp_max[3])
@@ -156,16 +163,16 @@ def quantize(obs, obs_bins):
     obs[1], obs_bins[1]), np.digitize(obs[2], obs_bins[2]),np.digitize(
     obs[3], obs_bins[3])
 
-def learn(env):
+def learn(env, q_values_file=None):
     """Create agent, start learning"""
     agent = CartPoleAgent(
         env=env,
         hyper_params=HyperParams(
-        LEARNING_RATE, INITIAL_EPSILON, EPSILON_DECAY, FINAL_EPSILON, DISCOUNT_FACTOR)
+        LEARNING_RATE, INITIAL_EPSILON, EPSILON_DECAY, FINAL_EPSILON, DISCOUNT_FACTOR),
+        q_values_file=q_values_file
     )
 
     obs_bins = calcuate_bins()
-
     for _ in tqdm(range(N_EPISODES)):
         # Start a new hand
         obs, _ = env.reset()
@@ -234,4 +241,8 @@ def plot(env, agent):
     plt.show()
 
 if __name__ == "__main__":
-    plot(*learn(init()))
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", help ='q-value filename')
+    args = parser.parse_args()
+    plot(*learn(init(), args.f))
