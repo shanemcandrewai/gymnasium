@@ -34,7 +34,6 @@ class CartPoleAgent:
         hyper_params: HyperParams,
     ):
         """Initialize a Q-Learning agent.
-
         Args:
             env: The training environment
             learning_rate: How quickly to update Q-values (0-1)
@@ -59,16 +58,15 @@ class CartPoleAgent:
 
     def get_action(self, obs: tuple[int, int, bool]) -> int:
         """Choose an action using epsilon-greedy strategy.
-
         Returns:
-            action: 0 (stand) or 1 (hit)
+            0: Push cart to the left
+            1: Push cart to the right
         """
         # With probability epsilon: explore (random action)
         if np.random.random() < self.epsilon:
             return self.env.action_space.sample()
 
         # With probability (1-epsilon): exploit (best known action)
-
         return int(np.argmax(self.q_values[obs]))
 
     def get_info(self):
@@ -85,10 +83,7 @@ class CartPoleAgent:
         return QvalueInfo(qnp_min[0], qnp_min[1], qnp_min[2], qnp_min[3], qnp_max[
         0], qnp_max[1], qnp_max[2], qnp_max[3])
 
-    def update(
-        self,
-        experience : Experience
-    ):
+    def update(self, experience : Experience):
         """Update Q-value based on experience"""
 
         # This is the heart of Q-learning: learn from (state, action, reward, next_state)
@@ -118,7 +113,6 @@ class CartPoleAgent:
         self.hyper_params.final_epsilon, self.epsilon -
         self.hyper_params.epsilon_decay)
 
-
 def get_moving_avgs(arr, window, convolution_mode):
     """Compute moving average to smooth noisy data."""
     return np.convolve(
@@ -126,7 +120,6 @@ def get_moving_avgs(arr, window, convolution_mode):
         np.ones(window),
         mode=convolution_mode
     ) / window
-
 
 def init():
     """Initialise gym environment"""
@@ -164,7 +157,6 @@ def quantize(obs, obs_bins):
 
 def learn(env):
     """Create agent, start learning"""
-
     agent = CartPoleAgent(
         env=env,
         hyper_params=HyperParams(
@@ -177,7 +169,6 @@ def learn(env):
         # Start a new hand
         obs, _ = env.reset()
         obs_quant = quantize(obs, obs_bins)
-
         done = False
 
         # Play one complete hand
@@ -199,8 +190,6 @@ def learn(env):
         # Reduce exploration rate (agent becomes less random over time)
         agent.decay_epsilon()
     print(agent.get_info())
-
-
     return env, agent
 
 def plot(env, agent):
