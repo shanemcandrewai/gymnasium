@@ -111,10 +111,14 @@ def get_moving_avgs(arr, window, convolution_mode):
     ) / window
 
 
-def run():
-    """Create environment and agent"""
+def init():
+    """intialize environment"""
     env_l = gym.make(GAME_ID)
     env_l = gym.wrappers.RecordEpisodeStatistics(env_l, buffer_length=N_EPISODES)
+    return env_l
+
+def learn(env_l):
+    """Create environment and agent"""
 
     agent_l = BlackjackAgent(
         env_l=env_l,
@@ -191,5 +195,4 @@ def plot(env_l, agent_l):
 
 
 if __name__ == "__main__":
-    env, agent = run()
-    plot(env, agent)
+    plot(*learn(init()))
