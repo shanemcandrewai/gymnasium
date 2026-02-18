@@ -26,7 +26,7 @@ class BlackjackAgent:
     """Back jack agent"""
     def __init__(
         self,
-        env_l: gym.Env,
+        env: gym.Env,
         hyper_params: HyperParams,
     ):
         """Initialize a Q-Learning agent.
@@ -39,7 +39,7 @@ class BlackjackAgent:
             final_epsilon: Minimum exploration rate (usually 0.1)
             discount_factor: How much to value future rewards (0-1)
         """
-        self.env = env_l
+        self.env = env
 
         # Q-table: maps (state, action) to expected reward
         # defaultdict automatically creates entries with zeros for new states
@@ -113,51 +113,51 @@ def get_moving_avgs(arr, window, convolution_mode):
 
 def init():
     """Initialise environment"""
-    env_l = gym.make(GAME_ID)
-    env_l = gym.wrappers.RecordEpisodeStatistics(env_l, buffer_length=N_EPISODES)
-    return env_l
+    env = gym.make(GAME_ID)
+    env = gym.wrappers.RecordEpisodeStatistics(env, buffer_length=N_EPISODES)
+    return env
 
-def learn(env_l):
+def learn(env):
     """Create agent, start learning"""
 
-    agent_l = BlackjackAgent(
-        env_l=env_l,
+    agent = BlackjackAgent(
+        env=env,
         hyper_params=HyperParams(
         LEARNING_RATE, INITIAL_EPSILON, EPSILON_DECAY, FINAL_EPSILON, DISCOUNT_FACTOR)
     )
 
     for _ in tqdm(range(N_EPISODES)):
         # Start a new hand
-        obs, _ = env_l.reset()
+        obs, _ = env.reset()
         done = False
 
         # Play one complete hand
         while not done:
             # Agent chooses action (initially random, gradually more intelligent)
-            action = agent_l.get_action(obs)
+            action = agent.get_action(obs)
 
             # Take action and observe result
-            next_obs, reward, terminated, truncated, _ = env_l.step(action)
+            next_obs, reward, terminated, truncated, _ = env.step(action)
 
             # Learn from this experience
-            agent_l.update(Experience(obs, action, reward, terminated, next_obs))
+            agent.update(Experience(obs, action, reward, terminated, next_obs))
 
             # Move to next state
             done = terminated or truncated
             obs = next_obs
 
         # Reduce exploration rate (agent becomes less random over time)
-        agent_l.decay_epsilon()
-    return env_l, agent_l
+        agent.decay_epsilon()
+    return env, agent
 
-def plot(env_l, agent_l):
+def plot(env, agent):
     """Smooth over a 500-episode window"""
     _, axs = plt.subplots(ncols=3, figsize=(12, 5))
 
     # Episode rewards (win/loss performance)
     axs[0].set_title("Episode rewards")
     reward_moving_average = get_moving_avgs(
-        env_l.return_queue,
+        env.return_queue,
         ROLLING_LENGTH,
         "valid"
     )
@@ -168,7 +168,7 @@ def plot(env_l, agent_l):
     # Episode lengths (how many actions per hand)
     axs[1].set_title("Episode lengths")
     length_moving_average = get_moving_avgs(
-        env_l.length_queue,
+        env.length_queue,
         ROLLING_LENGTH,
         "valid"
     )
@@ -179,7 +179,7 @@ def plot(env_l, agent_l):
     # Training error (how much we're still learning)
     axs[2].set_title("Training Error")
     training_error_moving_average = get_moving_avgs(
-        agent_l.training_error,
+        agent.training_error,
         ROLLING_LENGTH,
         "same"
     )
