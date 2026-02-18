@@ -111,23 +111,27 @@ def get_moving_avgs(arr, window, convolution_mode):
 
 
 def init():
-    """Initialise environment"""
+    """Initialise gym environment"""
     env = gym.make(GAME_ID)
     env = gym.wrappers.RecordEpisodeStatistics(env, buffer_length=N_EPISODES)
     return env
 
-def calcuate_bins(env):
+def calcuate_bins():
     """Calculate bins for action spaces"""
-    cart_pos_min = env.observation_space.low[0]
+    # cart_pos_min = env.observation_space.low[0]
+    cart_pos_min = -2.4
     cart_vel_min = -3
-    pole_ang_min = env.observation_space.low[2]
-    pole_ang_vel_min = -10
-    cart_pos_max = env.observation_space.high[0]
+    # pole_ang_min = env.observation_space.low[2]
+    pole_ang_min = -.2095
+    pole_ang_vel_min = -5
+    # cart_pos_max = env.observation_space.high[0]
+    cart_pos_max = 2.4
     cart_vel_max = 3
-    pole_ang_max = env.observation_space.high[2]
-    pole_ang_vel_max = 10
+    # pole_ang_max = env.observation_space.high[2]
+    pole_ang_max = .2095
+    pole_ang_vel_max = 5
 
-    num_bins = 30
+    num_bins = 5
 
     return np.linspace(cart_pos_min, cart_pos_max, num_bins), np.linspace(
     cart_vel_min, cart_vel_max, num_bins), np.linspace(
@@ -135,7 +139,7 @@ def calcuate_bins(env):
     pole_ang_vel_min, pole_ang_vel_max, num_bins)
 
 def quantize(obs, obs_bins):
-    """Quantize action spaces"""
+    """Quantize observation into action space bins"""
     return np.digitize(obs[0], obs_bins[0]), np.digitize(
     obs[1], obs_bins[1]), np.digitize(obs[2], obs_bins[2]),np.digitize(
     obs[3], obs_bins[3])
@@ -149,7 +153,7 @@ def learn(env):
         LEARNING_RATE, INITIAL_EPSILON, EPSILON_DECAY, FINAL_EPSILON, DISCOUNT_FACTOR)
     )
 
-    obs_bins = calcuate_bins(env)
+    obs_bins = calcuate_bins()
 
     for _ in tqdm(range(N_EPISODES)):
         # Start a new hand
