@@ -2,16 +2,15 @@
 """CartPole-v1 cleaned up and converted to DQN
 https://docs.pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 https://gymnasium.farama.org/introduction/train_agent/"""
-import argparse
-from collections import defaultdict, namedtuple
-import pickle
+# import argparse
+from collections import namedtuple
+# import pickle
 import math
 import random
 import torch
 from torch import nn
 from torch import optim
-import torch.nn.functional as F
-from tqdm import tqdm  # Progress bar
+# from tqdm import tqdm  # Progress bar
 from matplotlib import pyplot as plt
 import numpy as np
 import gymnasium as gym
@@ -53,7 +52,6 @@ class DQN(nn.Module):
             nn.ReLU(),
             nn.Linear(NUM_FEATURES, env.action_space.n)
         )
-        self.memory = Experience()
 
     def forward(self, x):
         """forward pass"""
@@ -120,6 +118,7 @@ class Agent:
     """Agent"""
     def __init__(self, game_id=GAME_ID):
         self.env = gym.make(game_id)
+        self.memory = []
 
     def train(self):
         """training"""
@@ -158,7 +157,7 @@ class Agent:
                     observation, dtype=torch.float32, device=DEVICE).unsqueeze(0)
 
                 # Store the transition in memory
-                memory.append(state, action, next_state, reward)
+                memory.append(Experience(state, action, next_state, terminated, reward))
 
                 # Move to the next state
                 state = next_state
@@ -183,10 +182,11 @@ class Agent:
 
 
         print('Complete')
+        Plot(self.env, self).plot()
 
     def select_action(self, policy_net_l, state_l, steps):
         """Select action"""
-        sample = random.random()
+        sample = random.sample(self.memory, BATCH_SIZE)
         eps_threshold = EPSILON_FINAL + (EPSILON_INITIAL - EPSILON_FINAL) * \
             math.exp(-1. * steps / EPSILON_DECAY)
         steps += 1
@@ -246,7 +246,7 @@ class Agent:
 
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
     # parser = argparse.ArgumentParser()
     # parser.add_argument("-f", help ='q-value filename')
@@ -254,3 +254,5 @@ class Agent:
     # en = Env(args.f)
     # pl = Plot(en, en.learn())
     # pl.plot()
+    Agent().train()
+
