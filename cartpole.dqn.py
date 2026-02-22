@@ -118,6 +118,7 @@ class Agent:
     """Agent"""
     def __init__(self, game_id=GAME_ID):
         self.env = gym.make(game_id)
+        self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=N_EPISODES)
         self.memory = []
 
     def train(self):
@@ -157,7 +158,7 @@ class Agent:
                     observation, dtype=torch.float32, device=DEVICE).unsqueeze(0)
 
                 # Store the transition in memory
-                memory.append(Experience(state, action, next_state, terminated, reward))
+                memory.append(Experience(state, action, reward, terminated, next_state))
 
                 # Move to the next state
                 state = next_state
