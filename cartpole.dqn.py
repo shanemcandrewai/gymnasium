@@ -7,6 +7,7 @@ from collections import namedtuple
 # import pickle
 import math
 import random
+from tqdm import tqdm
 import torch
 from torch import nn
 from torch import optim
@@ -26,7 +27,7 @@ EPSILON_FINAL = 0.1         # Always keep some exploration
 TAU = 0.005
 LR = 0.0003
 DISCOUNT_FACTOR = 0.95
-ROLLING_LENGTH = 500        #matplotlib Smooth over a 500-episode window
+ROLLING_LENGTH = 10        #matplotlib Smooth over a 500-episode window
 
 DEVICE = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 NUM_FEATURES = 128
@@ -75,7 +76,7 @@ class Plot:
 
     def plot(self):
         """Smooth over a 500-episode window"""
-        _, axs = plt.subplots(ncols=3, figsize=(12, 5))
+        _, axs = plt.subplots(ncols=2, figsize=(12, 5))
 
         # Episode rewards (win/loss performance)
         axs[0].set_title("Episode rewards")
@@ -99,17 +100,6 @@ class Plot:
         axs[1].set_ylabel("Average Episode Length")
         axs[1].set_xlabel("Episode")
 
-        # Training error (how much we're still learning)
-        axs[2].set_title("Training Error")
-        training_error_moving_average = self.get_moving_avgs(
-            self.training_error,
-            ROLLING_LENGTH,
-            "same"
-        )
-        axs[2].plot(range(len(training_error_moving_average)), training_error_moving_average)
-        axs[2].set_ylabel("Temporal Difference Error")
-        axs[2].set_xlabel("Step")
-
         plt.tight_layout()
         plt.show()
 
@@ -118,7 +108,6 @@ class Agent:
     """Agent"""
     def __init__(self, game_id=GAME_ID):
         self.env = gym.make(game_id)
-        self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=N_EPISODES)
         self.memory = []
 
     def train(self):
@@ -133,20 +122,22 @@ class Agent:
         memory = []
 
         if torch.cuda.is_available() or torch.backends.mps.is_available():
-            num_episodes = 600
-            # num_episodes = 200
+            # num_episodes = 600
+            num_episodes = 200
         else:
             num_episodes = 50
 
+        self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=num_episodes)
+
+
         steps_done = 0
-        for _ in range(num_episodes):
+        for _ in tqdm(range(num_episodes)):
             # Initialize the environment and get its state
             state, _ = self.env.reset()
             state = torch.tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0)
             done = False
             t = 0
             while not done:
-                t += 1
                 action, steps_done = self.select_action(policy_net, state,  steps_done)
                 observation, reward, terminated, truncated, _ = self.env.step(action.item())
                 reward = torch.tensor([reward], device=DEVICE)
@@ -180,7 +171,7 @@ class Agent:
                 if terminated or truncated:
                     episode_durations.append(t + 1)
                     done = True
-
+                t += 1
 
         print('Complete')
         Plot(self.env, self).plot()
