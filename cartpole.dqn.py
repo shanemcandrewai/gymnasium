@@ -165,7 +165,7 @@ class Agent:
                 # Perform one step of the optimization (on the policy network)
                 if len(memory) >= BATCH_SIZE:
                     self.optimize_model(
-                    optimizer, memory.sample(BATCH_SIZE), policy_net, target_net)
+                    optimizer, random.sample(memory, BATCH_SIZE), policy_net, target_net)
 
                 # Soft update of the target network's weights
                 # θ′ ← τ θ + (1 −τ )θ′
@@ -186,14 +186,14 @@ class Agent:
 
     def select_action(self, policy_net_l, state_l, steps):
         """Select action"""
-        sample = random.sample(self.memory, BATCH_SIZE)
+        sample = random.random()
         eps_threshold = EPSILON_FINAL + (EPSILON_INITIAL - EPSILON_FINAL) * \
             math.exp(-1. * steps / EPSILON_DECAY)
         steps += 1
         if sample > eps_threshold:
             with torch.no_grad():
                 # t.max(1) will return the largest column value of each row.
-                # second column on max result is index of where max element was
+                # second column on max resul t is index of where max element was
                 # found, so we pick action with the larger expected reward.
                 return policy_net_l(state_l).max(1).indices.view(1, 1), steps
         else:
@@ -255,4 +255,3 @@ if __name__ == "__main__":
     # pl = Plot(en, en.learn())
     # pl.plot()
     Agent().train()
-
