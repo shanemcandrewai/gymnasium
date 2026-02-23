@@ -103,33 +103,28 @@ class Agent:
     def __init__(self, game_id=GAME_ID):
         self.env = gym.make(game_id, render_mode="human")
         # self.env = gym.make(game_id)
-        self.memory = []
         if torch.cuda.is_available() or torch.backends.mps.is_available():
             # self.num_episodes = 600
             self.num_episodes = 200
         else:
             self.num_episodes = 50
-        self.epsilon_initial = 1.0       # Start with 100% random actions
+        self.policy_net = DQN(self.env).to(DEVICE)
+        try:
+            self.policy_net.load_state_dict(torch.load("model.pth", weights_only=True))
+            self.epsilon_initial = 0.2       # Start with fewer random actions
+
+        except (OSError, TypeError):
+            self.epsilon_initial = 1.0       # Start with 100% random actions
+
         self.epsilon_decay = self.epsilon_initial / (
         self.num_episodes / 2)  # Reduce exploration over time
+        self.target_net = DQN(self.env).to(DEVICE)
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=LR, amsgrad=True)
 
     def train(self):
         """training"""
-        episode_durations = []
 
-        policy_net = DQN(self.env).to(DEVICE)
-        try:
-            policy_net.load_state_dict(torch.load("model.pth", weights_only=True))
-            self.epsilon_initial = 0.2       # Start with fewer random actions
-            self.epsilon_decay = self.epsilon_initial / (
-            self.num_episodes / 2)  # Reduce exploration over time
-
-        except (OSError, TypeError):
-            pass
-        target_net = DQN(self.env).to(DEVICE)
-        target_net.load_state_dict(policy_net.state_dict())
-
-        optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
         memory = []
 
 
@@ -144,7 +139,7 @@ class Agent:
             done = False
             t = 0
             while not done:
-                action, steps_done = self.select_action(policy_net, state,  steps_done)
+                action, steps_done = self.select_action(self.policy_net, state,  steps_done)
                 observation, reward, terminated, truncated, _ = self.env.step(action.item())
                 reward = torch.tensor([reward], device=DEVICE)
 
@@ -163,28 +158,28 @@ class Agent:
                 # Perform one step of the optimization (on the policy network)
                 if len(memory) >= BATCH_SIZE:
                     self.optimize_model(
-                    optimizer, random.sample(memory, BATCH_SIZE), policy_net, target_net)
+                    self.optimizer, random.sample(
+                    memory, BATCH_SIZE), self.policy_net, self.target_net)
 
                 # Soft update of the target network's weights
                 # θ′ ← τ θ + (1 −τ )θ′
-                target_net_state_dict = target_net.state_dict()
-                policy_net_state_dict = policy_net.state_dict()
+                target_net_state_dict = self.target_net.state_dict()
+                policy_net_state_dict = self.policy_net.state_dict()
                 for key in policy_net_state_dict:
                     target_net_state_dict[key] = policy_net_state_dict[
                         key]*TAU + target_net_state_dict[key]*(1-TAU)
-                target_net.load_state_dict(target_net_state_dict)
+                self.target_net.load_state_dict(target_net_state_dict)
 
                 if terminated or truncated:
-                    episode_durations.append(t + 1)
                     done = True
                 t += 1
 
         print('Complete')
         try:
-            torch.save(policy_net.state_dict(), "model.pth")
+            torch.save(self.policy_net.state_dict(), "model.pth")
         except (OSError, TypeError):
             pass
-
+        self.env.close()
         Plot(self.env, self).plot()
 
     def select_action(self, policy_net_l, state_l, steps):
