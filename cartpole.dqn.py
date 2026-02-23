@@ -20,9 +20,6 @@ GAME_ID = "CartPole-v1"
 
 # Training hyperparameters
 LEARNING_RATE = 0.01        # How fast to learn (higher = faster but less stable)
-N_EPISODES = 10000         # Number of hands to practice
-EPSILON_INITIAL = 1.0       # Start with 100% random actions
-EPSILON_DECAY = EPSILON_INITIAL / (N_EPISODES / 2)  # Reduce exploration over time
 EPSILON_FINAL = 0.1         # Always keep some exploration
 TAU = 0.005
 LR = 0.0003
@@ -38,9 +35,6 @@ GAMMA = 0.99
 HyperParams = namedtuple('HyperParams', [
 'learning_rate', 'epsilon_initial', 'epsilon_decay', 'epsilon_final', 'discount_factor'])
 Experience = namedtuple('Experience', ['state', 'action', 'reward', 'terminated', 'next_state'])
-QvalueInfo = namedtuple('QvalueInfo', [
-'cart_pos_min', 'cart_vel_min', 'pole_ang_min', 'pole_ang_vel_min', 'cart_pos_max', \
-'cart_vel_max', 'pole_ang_max', 'pole_ang_vel_max'])
 
 class DQN(nn.Module):
     """Deep Q-network"""
@@ -107,31 +101,43 @@ class Plot:
 class Agent:
     """Agent"""
     def __init__(self, game_id=GAME_ID):
-        self.env = gym.make(game_id)
+        self.env = gym.make(game_id, render_mode="human")
+        # self.env = gym.make(game_id)
         self.memory = []
+        if torch.cuda.is_available() or torch.backends.mps.is_available():
+            # self.num_episodes = 600
+            self.num_episodes = 200
+        else:
+            self.num_episodes = 50
+        self.epsilon_initial = 1.0       # Start with 100% random actions
+        self.epsilon_decay = self.epsilon_initial / (
+        self.num_episodes / 2)  # Reduce exploration over time
 
     def train(self):
         """training"""
         episode_durations = []
 
         policy_net = DQN(self.env).to(DEVICE)
+        try:
+            policy_net.load_state_dict(torch.load("model.pth", weights_only=True))
+            self.epsilon_initial = 0.2       # Start with fewer random actions
+            self.epsilon_decay = self.epsilon_initial / (
+            self.num_episodes / 2)  # Reduce exploration over time
+
+        except (OSError, TypeError):
+            pass
         target_net = DQN(self.env).to(DEVICE)
         target_net.load_state_dict(policy_net.state_dict())
 
         optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
         memory = []
 
-        if torch.cuda.is_available() or torch.backends.mps.is_available():
-            # num_episodes = 600
-            num_episodes = 200
-        else:
-            num_episodes = 50
 
-        self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=num_episodes)
+        self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=self.num_episodes)
 
 
         steps_done = 0
-        for _ in tqdm(range(num_episodes)):
+        for _ in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
             state, _ = self.env.reset()
             state = torch.tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0)
@@ -174,13 +180,18 @@ class Agent:
                 t += 1
 
         print('Complete')
+        try:
+            torch.save(policy_net.state_dict(), "model.pth")
+        except (OSError, TypeError):
+            pass
+
         Plot(self.env, self).plot()
 
     def select_action(self, policy_net_l, state_l, steps):
         """Select action"""
         sample = random.random()
-        eps_threshold = EPSILON_FINAL + (EPSILON_INITIAL - EPSILON_FINAL) * \
-            math.exp(-1. * steps / EPSILON_DECAY)
+        eps_threshold = EPSILON_FINAL + (self.epsilon_initial - EPSILON_FINAL) * \
+            math.exp(-1. * steps / self.epsilon_decay)
         steps += 1
         if sample > eps_threshold:
             with torch.no_grad():
