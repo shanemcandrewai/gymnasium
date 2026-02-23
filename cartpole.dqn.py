@@ -108,29 +108,23 @@ class Agent:
             self.num_episodes = 200
         else:
             self.num_episodes = 50
+        self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=self.num_episodes)
         self.policy_net = DQN(self.env).to(DEVICE)
         try:
             self.policy_net.load_state_dict(torch.load("model.pth", weights_only=True))
             self.epsilon_initial = 0.2       # Start with fewer random actions
-
         except (OSError, TypeError):
             self.epsilon_initial = 1.0       # Start with 100% random actions
 
         self.epsilon_decay = self.epsilon_initial / (
         self.num_episodes / 2)  # Reduce exploration over time
         self.target_net = DQN(self.env).to(DEVICE)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=LR, amsgrad=True)
 
     def train(self):
         """training"""
-
+        self.target_net.load_state_dict(self.policy_net.state_dict())
         memory = []
-
-
-        self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=self.num_episodes)
-
-
         steps_done = 0
         for _ in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
@@ -241,8 +235,6 @@ class Agent:
         # In-place gradient clipping
         torch.nn.utils.clip_grad_value_(policy_net_l.parameters(), 100)
         optimizer_l.step()
-
-
 
 if __name__ == "__main__":
 
