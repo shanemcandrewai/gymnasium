@@ -83,8 +83,9 @@ class Agent:
             # Initialize the environment and get its state
             state, info = self.env.reset()
             state = torch.tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0)
-            done = False
-            while not done:
+            terminated = False
+            truncated = False
+            while not terminated and not truncated:
                 action, steps_done = self.select_action(self.policy_net, state,  steps_done)
                 observation, reward, terminated, truncated, info = self.env.step(action.item())
                 reward = torch.tensor([reward], device=DEVICE)
@@ -115,9 +116,6 @@ class Agent:
                     target_net_state_dict[key] = policy_net_state_dict[
                         key]*TAU + target_net_state_dict[key]*(1-TAU)
                 self.target_net.load_state_dict(target_net_state_dict)
-
-                if terminated or truncated:
-                    done = True
             if info['episode']['l'] >= 500:
                 break
 
