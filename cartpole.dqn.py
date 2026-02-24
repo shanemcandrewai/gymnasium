@@ -127,7 +127,7 @@ class Agent:
         except (OSError, TypeError):
             pass
         self.env.close()
-        Plot(self.env, self).plot()
+        Plot(self.env).plot()
 
     def select_action(self, policy_net_l, state_l, steps):
         """Select action"""
@@ -191,9 +191,8 @@ class Agent:
 
 class Plot:
     """Results plotter"""
-    def __init__(self, env, training_error):
+    def __init__(self, env):
         self.env = env
-        self.training_error = training_error
 
     def get_moving_avgs(self, arr, window, convolution_mode):
         """Compute moving average to smooth noisy data."""
