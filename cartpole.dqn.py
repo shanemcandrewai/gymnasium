@@ -2,16 +2,14 @@
 """CartPole-v1 cleaned up and converted to DQN
 https://docs.pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 https://gymnasium.farama.org/introduction/train_agent/"""
-# import argparse
+import argparse
 from collections import namedtuple
-# import pickle
 import math
 import random
-from tqdm import tqdm
 import torch
 from torch import nn
 from torch import optim
-# from tqdm import tqdm  # Progress bar
+from tqdm import tqdm  # Progress bar
 from matplotlib import pyplot as plt
 import numpy as np
 import gymnasium as gym
@@ -19,10 +17,9 @@ import gymnasium as gym
 GAME_ID = "CartPole-v1"
 
 # Training hyperparameters
-LEARNING_RATE = 0.01        # How fast to learn (higher = faster but less stable)
 EPSILON_FINAL = 0.1         # Always keep some exploration
 TAU = 0.005
-LR = 0.0003
+LEARNING_RATE = 0.0003
 DISCOUNT_FACTOR = 0.95
 ROLLING_LENGTH = 10        #matplotlib Smooth over a 500-episode window
 
@@ -53,8 +50,9 @@ class DQN(nn.Module):
 
 class Agent:
     """Agent"""
-    def __init__(self, game_id=GAME_ID):
+    def __init__(self, file=None, game_id=GAME_ID):
         self.env = gym.make(game_id, render_mode="human")
+        self.file = file
         # self.env = gym.make(game_id)
         if torch.cuda.is_available() or torch.backends.mps.is_available():
             # self.num_episodes = 600
@@ -64,7 +62,7 @@ class Agent:
         self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=self.num_episodes)
         self.policy_net = DQN(self.env).to(DEVICE)
         try:
-            self.policy_net.load_state_dict(torch.load("model.pth", weights_only=True))
+            self.policy_net.load_state_dict(torch.load(file, weights_only=True))
             self.epsilon_initial = 0.2       # Start with fewer random actions
         except (OSError, TypeError):
             self.epsilon_initial = 1.0       # Start with 100% random actions
@@ -72,7 +70,7 @@ class Agent:
         self.epsilon_decay = self.epsilon_initial / (
         self.num_episodes / 2)  # Reduce exploration over time
         self.target_net = DQN(self.env).to(DEVICE)
-        self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=LR, amsgrad=True)
+        self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=LEARNING_RATE, amsgrad=True)
 
     def train(self):
         """training"""
@@ -231,11 +229,7 @@ class Plot:
 
 
 if __name__ == "__main__":
-
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("-f", help ='q-value filename')
-    # args = parser.parse_args()
-    # en = Env(args.f)
-    # pl = Plot(en, en.learn())
-    # pl.plot()
-    Agent().train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", help ='q-value filename')
+    args = parser.parse_args()
+    Agent(args.f).train()
