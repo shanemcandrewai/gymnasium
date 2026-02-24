@@ -32,8 +32,6 @@ BATCH_SIZE = 128
 GAMMA = 0.99
 
 # types
-HyperParams = namedtuple('HyperParams', [
-'learning_rate', 'epsilon_initial', 'epsilon_decay', 'epsilon_final', 'discount_factor'])
 Experience = namedtuple('Experience', ['state', 'action', 'reward', 'terminated', 'next_state'])
 
 class DQN(nn.Module):
@@ -52,51 +50,6 @@ class DQN(nn.Module):
         """forward pass"""
         logits = self.linear_relu_stack(x)
         return logits
-
-
-class Plot:
-    """Results plotter"""
-    def __init__(self, env, training_error):
-        self.env = env
-        self.training_error = training_error
-
-    def get_moving_avgs(self, arr, window, convolution_mode):
-        """Compute moving average to smooth noisy data."""
-        return np.convolve(
-            np.array(arr).flatten(),
-            np.ones(window),
-            mode=convolution_mode
-        ) / window
-
-    def plot(self):
-        """Smooth over a 500-episode window"""
-        _, axs = plt.subplots(ncols=2, figsize=(12, 5))
-
-        # Episode rewards (win/loss performance)
-        axs[0].set_title("Episode rewards")
-        reward_moving_average = self.get_moving_avgs(
-            self.env.return_queue,
-            ROLLING_LENGTH,
-            "valid"
-        )
-        axs[0].plot(range(len(reward_moving_average)), reward_moving_average)
-        axs[0].set_ylabel("Average Reward")
-        axs[0].set_xlabel("Episode")
-
-        # Episode lengths (how many actions per hand)
-        axs[1].set_title("Episode lengths")
-        length_moving_average = self.get_moving_avgs(
-            self.env.length_queue,
-            ROLLING_LENGTH,
-            "valid"
-        )
-        axs[1].plot(range(len(length_moving_average)), length_moving_average)
-        axs[1].set_ylabel("Average Episode Length")
-        axs[1].set_xlabel("Episode")
-
-        plt.tight_layout()
-        plt.show()
-
 
 class Agent:
     """Agent"""
@@ -128,13 +81,12 @@ class Agent:
         steps_done = 0
         for _ in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
-            state, _ = self.env.reset()
+            state, info = self.env.reset()
             state = torch.tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0)
             done = False
-            t = 0
             while not done:
                 action, steps_done = self.select_action(self.policy_net, state,  steps_done)
-                observation, reward, terminated, truncated, _ = self.env.step(action.item())
+                observation, reward, terminated, truncated, info = self.env.step(action.item())
                 reward = torch.tensor([reward], device=DEVICE)
 
                 if terminated:
@@ -166,7 +118,8 @@ class Agent:
 
                 if terminated or truncated:
                     done = True
-                t += 1
+            if info['episode']['l'] >= 500:
+                break
 
         print('Complete')
         try:
@@ -235,6 +188,50 @@ class Agent:
         # In-place gradient clipping
         torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
         optimizer_l.step()
+
+class Plot:
+    """Results plotter"""
+    def __init__(self, env, training_error):
+        self.env = env
+        self.training_error = training_error
+
+    def get_moving_avgs(self, arr, window, convolution_mode):
+        """Compute moving average to smooth noisy data."""
+        return np.convolve(
+            np.array(arr).flatten(),
+            np.ones(window),
+            mode=convolution_mode
+        ) / window
+
+    def plot(self):
+        """Smooth over a 500-episode window"""
+        _, axs = plt.subplots(ncols=2, figsize=(12, 5))
+
+        # Episode rewards (win/loss performance)
+        axs[0].set_title("Episode rewards")
+        reward_moving_average = self.get_moving_avgs(
+            self.env.return_queue,
+            ROLLING_LENGTH,
+            "valid"
+        )
+        axs[0].plot(range(len(reward_moving_average)), reward_moving_average)
+        axs[0].set_ylabel("Average Reward")
+        axs[0].set_xlabel("Episode")
+
+        # Episode times
+        axs[1].set_title("Episode times")
+        length_moving_average = self.get_moving_avgs(
+            self.env.time_queue,
+            ROLLING_LENGTH,
+            "valid"
+        )
+        axs[1].plot(range(len(length_moving_average)), length_moving_average)
+        axs[1].set_ylabel("Average Episode Time")
+        axs[1].set_xlabel("Episode")
+
+        plt.tight_layout()
+        plt.show()
+
 
 if __name__ == "__main__":
 
