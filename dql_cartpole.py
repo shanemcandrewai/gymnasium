@@ -53,7 +53,7 @@ class DNQ(nn.Module):
 class DQNAgent:
     """Deep Q network Agent"""
     def __init__(self, env_l):
-        self.input_dim = env_l.observation_space.shape[0]
+        self.input_dim = np.prod(env_l.observation_space.shape)
         self.output_dim = env_l.action_space.n
         random.seed(SEED)
         self.policy_net = DNQ(self.input_dim, self.output_dim).to(device)
