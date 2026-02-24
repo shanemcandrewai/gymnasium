@@ -1,6 +1,6 @@
 """
-Reinforcement Learning (DQN) Tutorial
 https://docs.pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+Reinforcement Learning (DQN) Tutorial
 =====================================
 **Author**: `Adam Paszke <https://github.com/apaszke>`_
             `Mark Towers <https://github.com/pseudo-rnd-thoughts>`_
