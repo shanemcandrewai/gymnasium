@@ -1,4 +1,7 @@
-"""dql_cartpole"""
+"""
+dql_cartpole refactored and linted
+https://github.com/SeeknnDestroy/DQN-CartPole/blob/master/dql-cartpole.ipynb
+"""
 # Import necessary libraries
 import random
 import numpy as np
