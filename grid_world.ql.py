@@ -3,9 +3,22 @@
 Adapated from Blackjack-v1 cleaned up https://gymnasium.farama.org/introduction/train_agent/
 game code -
 C:\\Users\\shane\\dev\\gymnasium\\gridworld\\gridworld\\envs\\grid_world.py
-install with
-cd gridworld
-pip install -e .
+
+Set up dunder-init files (__init__.py)
+======================================
+$ cat gridworld/gymnasium_env/__init__.py
+from gymnasium.envs.registration import register
+register(
+    id="GridWorld-v0",
+    entry_point="gridworld.gymnasium_env.envs:GridWorldEnv",
+)
+$ cat gridworld/gymnasium_env/envs/__init__.py
+from gridworld.gymnasium_env.envs.grid_world import GridWorldEnv
+
+Register while making
+=====================
+import gymnasium as gym
+env = gym.make('gridworld.gymnasium_env:GridWorld-v0')
 """
 from collections import defaultdict, namedtuple
 from tqdm import tqdm  # Progress bar
