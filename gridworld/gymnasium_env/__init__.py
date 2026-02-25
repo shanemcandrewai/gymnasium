@@ -1,6 +1,5 @@
 from gymnasium.envs.registration import register
-
 register(
-    id="gymnasium_env/GridWorld-v0",
-    entry_point="gymnasium_env.envs:GridWorldEnv",
+    id="GridWorld-v0",
+    entry_point="gridworld.gymnasium_env.envs:GridWorldEnv",
 )
