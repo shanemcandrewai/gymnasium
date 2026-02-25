@@ -27,7 +27,7 @@ import numpy as np
 import gymnasium as gym
 import gridworld
 
-GAME_ID = "gridworld/GridWorld-v0"
+GAME_ID = "gridworld.gymnasium_env:GridWorld-v0"
 
 # Training hyperparameters
 LEARNING_RATE = 0.01        # How fast to learn (higher = faster but less stable)
