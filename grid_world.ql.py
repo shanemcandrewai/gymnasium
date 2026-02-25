@@ -31,7 +31,7 @@ GAME_ID = "gridworld.gymnasium_env:GridWorld-v0"
 
 # Training hyperparameters
 LEARNING_RATE = 0.01        # How fast to learn (higher = faster but less stable)
-N_EPISODES = 100_000        # Number of hands to practice
+N_EPISODES = 10000          # Number of hands to practice
 INITIAL_EPSILON = 1.0       # Start with 100% random actions
 EPSILON_DECAY = INITIAL_EPSILON / (N_EPISODES / 2)  # Reduce exploration over time
 FINAL_EPSILON = 0.1         # Always keep some exploration
@@ -86,7 +86,7 @@ class GridWorldAgent:
 
         # With probability (1-epsilon): exploit (best known action)
 
-        return int(np.argmax(self.q_values[obs_l]))
+        return int(np.argmax(self.q_values[*obs_l['agent'].tolist(), *obs_l['target'].tolist()]))
 
     def update(
         self,
@@ -98,20 +98,22 @@ class GridWorldAgent:
         """
         # What's the best we could do from the next state?
         # (Zero if episode terminated - no future rewards possible)
-        future_q_value = (not experience.terminated) * np.max(self.q_values[experience.next_obs])
+        future_q_value = (not experience.terminated) * np.max(self.q_values[*experience.next_obs[
+        'agent'].tolist(), *experience.next_obs['target'].tolist()])
 
         # What should the Q-value be? (Bellman equation)
         target = experience.reward + self.hyper_params.discount_factor * future_q_value
 
         # How wrong was our current estimate?
-        temporal_difference = target - self.q_values[experience.obs][experience.action]
+        temporal_difference = target - self.q_values[*experience.obs[
+        'agent'].tolist(), *experience.obs['target'].tolist()][experience.action]
 
         # Update our estimate in the direction of the error
         # Learning rate controls how big steps we take
-        self.q_values[experience.obs][experience.action] = (
-            self.q_values[experience.obs][
-            experience.action] + self.hyper_params.learning_rate * temporal_difference
-        )
+        self.q_values[*experience.obs['agent'].tolist(), *experience.obs['target'].tolist()][
+        experience.action] = (self.q_values[*experience.obs['agent'].tolist(), *experience.obs[
+        'target'].tolist()][
+        experience.action] + self.hyper_params.learning_rate * temporal_difference)
 
         # Track learning progress (useful for debugging)
         self.training_error.append(temporal_difference)
