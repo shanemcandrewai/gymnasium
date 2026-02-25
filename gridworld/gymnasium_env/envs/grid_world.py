@@ -24,21 +24,24 @@ env = gym.make('gridworld.gymnasium_env:GridWorld-v0')
 """
 
 from enum import Enum
-import gymnasium as gym
-from gymnasium import spaces
 import pygame
 import numpy as np
+import gymnasium as gym
+from gymnasium import spaces
 
 
 class Actions(Enum):
-    right = 0
-    up = 1
-    left = 2
-    down = 3
+    """Actions"""
+    RIGHT = 0
+    UP = 1
+    LEFT = 2
+    DOWN = 3
 
 
 class GridWorldEnv(gym.Env):
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+    """Grid world environment"""
+    # metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 60}
 
     def __init__(self, render_mode=None, size=5):
         self.size = size  # The size of the square grid
@@ -54,7 +57,7 @@ class GridWorldEnv(gym.Env):
             }
         )
 
-        # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
+        # We have 4 actions, corresponding to "right", "up", "left", "down"
         self.action_space = spaces.Discrete(4)
 
         """
@@ -63,10 +66,10 @@ class GridWorldEnv(gym.Env):
         i.e. 0 corresponds to "right", 1 to "up" etc.
         """
         self._action_to_direction = {
-            Actions.right.value: np.array([1, 0]),
-            Actions.up.value: np.array([0, 1]),
-            Actions.left.value: np.array([-1, 0]),
-            Actions.down.value: np.array([0, -1]),
+            Actions.RIGHT.value: np.array([1, 0]),
+            Actions.UP.value: np.array([0, 1]),
+            Actions.LEFT.value: np.array([-1, 0]),
+            Actions.DOWN.value: np.array([0, -1]),
         }
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]

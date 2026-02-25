@@ -136,7 +136,8 @@ def get_moving_avgs(arr, window, convolution_mode):
 
 def init():
     """Initialise environment"""
-    env = gym.make(GAME_ID)
+    # env = gym.make(GAME_ID)
+    env = gym.make(GAME_ID, render_mode="human")
     env = gym.wrappers.RecordEpisodeStatistics(env, buffer_length=N_EPISODES)
     return env
 
