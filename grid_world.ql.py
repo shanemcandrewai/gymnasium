@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 Adapated from Blackjack-v1 cleaned up https://gymnasium.farama.org/introduction/train_agent/
-game code -
-C:\\Users\\shane\\dev\\gymnasium\\gridworld\\gridworld\\envs\\grid_world.py
+
+GridWorld-v0 game code -
+C:\\Users\\shane\\dev\\gymnasium\\gridworld\\gymnasium_env\\envs\\grid_world.py
 
 Set up dunder-init files (__init__.py)
 ======================================
@@ -25,7 +26,6 @@ from tqdm import tqdm  # Progress bar
 from matplotlib import pyplot as plt
 import numpy as np
 import gymnasium as gym
-import gridworld
 
 GAME_ID = "gridworld.gymnasium_env:GridWorld-v0"
 

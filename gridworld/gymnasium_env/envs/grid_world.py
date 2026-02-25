@@ -2,9 +2,25 @@
 Originally generated with
 copier copy https://github.com/Farama-Foundation/gymnasium-env-template.git "gridworld"
 https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
-install with
-cd gridworld #directory containing pyproject.toml
-pip install -e .
+
+Assuming this file is -
+C:\\Users\\shane\\dev\\gymnasium\\gridworld\\gymnasium_env\\envs\\grid_world.py
+
+Set up dunder-init files (__init__.py)
+======================================
+$ cat gridworld/gymnasium_env/__init__.py
+from gymnasium.envs.registration import register
+register(
+    id="GridWorld-v0",
+    entry_point="gridworld.gymnasium_env.envs:GridWorldEnv",
+)
+$ cat gridworld/gymnasium_env/envs/__init__.py
+from gridworld.gymnasium_env.envs.grid_world import GridWorldEnv
+
+Register while making
+=====================
+import gymnasium as gym
+env = gym.make('gridworld.gymnasium_env:GridWorld-v0')
 """
 
 from enum import Enum
