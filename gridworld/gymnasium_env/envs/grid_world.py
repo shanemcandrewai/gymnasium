@@ -1,7 +1,12 @@
 """ 
 Originally generated with
 copier copy https://github.com/Farama-Foundation/gymnasium-env-template.git "gridworld"
+https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
+install with
+cd gridworld #directory containing pyproject.toml
+pip install -e .
 """
+
 from enum import Enum
 import gymnasium as gym
 from gymnasium import spaces
