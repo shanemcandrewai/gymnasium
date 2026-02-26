@@ -213,15 +213,15 @@ class GridWorldEnv(gym.Env):
             # keep the framerate stable.
             self.metadata["step"] += 1
             if self.metadata["terminated"]:
-                if self.metadata["direct"] and self.metadata["step"] > 6:
+                if self.metadata["direct"] and self.metadata["step"] > 7:
                     self.metadata["render_fps"] = 2
                 self.metadata["step"] = 0
                 self.metadata["terminated"] = False
                 self.metadata["direct"] = True
                 self.metadata["distance"] = -1
-            elif self.metadata["render_fps"] == 2:
-                if self.metadata["step"] > 6 and not self.metadata["direct"]:
-                    self.metadata["render_fps"] = 600
+            elif self.metadata["render_fps"] == 2 and self.metadata[
+            "step"] > 6 and not self.metadata["direct"]:
+                self.metadata["render_fps"] = 600
             self.clock.tick(self.metadata["render_fps"])
             # pygame.QUIT event means the user clicked X to close your window
             for event in pygame.event.get():
