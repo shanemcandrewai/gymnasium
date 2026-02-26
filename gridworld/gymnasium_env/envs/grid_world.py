@@ -42,7 +42,9 @@ class Actions(Enum):
 class GridWorldEnv(gym.Env):
     """Grid world environment"""
     # metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
-    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 60}
+    metadata = {"render_modes": [
+    "human", "rgb_array"], "render_fps": 600, "step": 0, "distance": -1, "terminated":
+        False, "direct": True}
 
     def __init__(self, render_mode=None, size=5):
         self.metadata['size'] = 5
@@ -92,10 +94,13 @@ class GridWorldEnv(gym.Env):
         return {"agent": self._agent_location, "target": self._target_location}
 
     def _get_info(self):
+        new_distance = np.linalg.norm(self._agent_location - self._target_location, ord=1)
+        if self.metadata["distance"] >= 0 and self.metadata[
+        "direct"] and new_distance >= self.metadata["distance"]:
+            self.metadata["direct"] = False
+        self.metadata["distance"] = new_distance
         return {
-            "distance": np.linalg.norm(
-                self._agent_location - self._target_location, ord=1
-            )
+            "distance": new_distance
         }
 
     def reset(self, *, seed=None, options=None):
@@ -131,6 +136,9 @@ class GridWorldEnv(gym.Env):
         )
         # An episode is done iff the agent has reached the target
         terminated = np.array_equal(self._agent_location, self._target_location)
+        if terminated:
+            self.metadata["terminated"] = True
+
         reward = 1 if terminated else 0  # Binary sparse rewards
         observation = self._get_obs()
         info = self._get_info()
@@ -203,6 +211,17 @@ class GridWorldEnv(gym.Env):
             # We need to ensure that human-rendering occurs at the predefined framerate.
             # The following line will automatically add a delay to
             # keep the framerate stable.
+            self.metadata["step"] += 1
+            if self.metadata["terminated"]:
+                if self.metadata["direct"] and self.metadata["step"] > 6:
+                    self.metadata["render_fps"] = 2
+                self.metadata["step"] = 0
+                self.metadata["terminated"] = False
+                self.metadata["direct"] = True
+                self.metadata["distance"] = -1
+            elif self.metadata["render_fps"] == 2:
+                if self.metadata["step"] > 6 and not self.metadata["direct"]:
+                    self.metadata["render_fps"] = 600
             self.clock.tick(self.metadata["render_fps"])
             # pygame.QUIT event means the user clicked X to close your window
             for event in pygame.event.get():
