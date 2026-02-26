@@ -2,6 +2,7 @@
 Originally generated with
 copier copy https://github.com/Farama-Foundation/gymnasium-env-template.git "gridworld"
 https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
+Linted and cleaned up
 
 Assuming this file is -
 C:\\Users\\shane\\dev\\gymnasium\\gridworld\\gymnasium_env\\envs\\grid_world.py
@@ -23,11 +24,15 @@ import gymnasium as gym
 env = gym.make('gridworld.gymnasium_env:GridWorld-v0')
 """
 
+from collections import namedtuple
 from enum import Enum
 import pygame
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
+
+GridWorldParams = namedtuple('GridWorldParams', [
+'size', 'window_size', 'observation_space', 'action_space', 'render_mode'])
 
 
 class Actions(Enum):
@@ -44,13 +49,13 @@ class GridWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 60}
 
     def __init__(self, render_mode=None, size=5):
-        self.size = size  # The size of the square grid
-        self.window_size = 512  # The size of the PyGame window
+        self.params = GridWorldParams(render_mode=render_mode, size=size)
+        self.params.window_size = 512  # The size of the PyGame window
 
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2,
         # i.e. MultiDiscrete([size, size]).
-        self.observation_space = spaces.Dict(
+        self.params.observation_space = spaces.Dict(
             {
                 "agent": spaces.Box(0, size - 1, shape=(2,), dtype=int),
                 "target": spaces.Box(0, size - 1, shape=(2,), dtype=int),
@@ -58,7 +63,7 @@ class GridWorldEnv(gym.Env):
         )
 
         # We have 4 actions, corresponding to "right", "up", "left", "down"
-        self.action_space = spaces.Discrete(4)
+        self.params.action_space = spaces.Discrete(4)
 
         """
         The following dictionary maps abstract actions from `self.action_space` to 
@@ -73,7 +78,7 @@ class GridWorldEnv(gym.Env):
         }
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
-        self.render_mode = render_mode
+        self.params.render_mode = render_mode
 
         """
         If human-rendering is used, `self.window` will be a reference
@@ -84,6 +89,8 @@ class GridWorldEnv(gym.Env):
         """
         self.window = None
         self.clock = None
+        self._agent_location = None
+        self._target_location = None
 
     def _get_obs(self):
         return {"agent": self._agent_location, "target": self._target_location}
@@ -95,25 +102,25 @@ class GridWorldEnv(gym.Env):
             )
         }
 
-    def reset(self, seed=None, options=None):
+    def reset(self, *, seed=None, options=None):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
 
         # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int)
+        self._agent_location = self.np_random.integers(0, self.params.size, size=2, dtype=int)
 
         # We will sample the target's location randomly until it does not
         # coincide with the agent's location
         self._target_location = self._agent_location
         while np.array_equal(self._target_location, self._agent_location):
             self._target_location = self.np_random.integers(
-                0, self.size, size=2, dtype=int
+                0, self.params.size, size=2, dtype=int
             )
 
         observation = self._get_obs()
         info = self._get_info()
 
-        if self.render_mode == "human":
+        if self.params.render_mode == "human":
             self._render_frame()
 
         return observation, info
@@ -123,7 +130,7 @@ class GridWorldEnv(gym.Env):
         direction = self._action_to_direction[action]
         # We use `np.clip` to make sure we don't leave the grid
         self._agent_location = np.clip(
-            self._agent_location + direction, 0, self.size - 1
+            self._agent_location + direction, 0, self.params.size - 1
         )
         # An episode is done iff the agent has reached the target
         terminated = np.array_equal(self._agent_location, self._target_location)
@@ -131,27 +138,29 @@ class GridWorldEnv(gym.Env):
         observation = self._get_obs()
         info = self._get_info()
 
-        if self.render_mode == "human":
+        if self.params.render_mode == "human":
             self._render_frame()
 
         return observation, reward, terminated, False, info
 
     def render(self):
-        if self.render_mode == "rgb_array":
+        if self.params.render_mode == "rgb_array":
             return self._render_frame()
+        return None
 
     def _render_frame(self):
-        if self.window is None and self.render_mode == "human":
+        if self.window is None and self.params.render_mode == "human":
             pygame.init()
             pygame.display.init()
-            self.window = pygame.display.set_mode((self.window_size, self.window_size))
-        if self.clock is None and self.render_mode == "human":
+            self.window = pygame.display.set_mode((
+            self.params.window_size, self.params.window_size))
+        if self.clock is None and self.params.render_mode == "human":
             self.clock = pygame.time.Clock()
 
-        canvas = pygame.Surface((self.window_size, self.window_size))
+        canvas = pygame.Surface((self.params.window_size, self.params.window_size))
         canvas.fill((255, 255, 255))
         pix_square_size = (
-            self.window_size / self.size
+            self.params.window_size / self.params.size
         )  # The size of a single grid square in pixels
 
         # First we draw the target
@@ -172,23 +181,23 @@ class GridWorldEnv(gym.Env):
         )
 
         # Finally, add some gridlines
-        for x in range(self.size + 1):
+        for x in range(self.params.size + 1):
             pygame.draw.line(
                 canvas,
                 0,
                 (0, pix_square_size * x),
-                (self.window_size, pix_square_size * x),
+                (self.params.window_size, pix_square_size * x),
                 width=3,
             )
             pygame.draw.line(
                 canvas,
                 0,
                 (pix_square_size * x, 0),
-                (pix_square_size * x, self.window_size),
+                (pix_square_size * x, self.params.window_size),
                 width=3,
             )
 
-        if self.render_mode == "human":
+        if self.params.render_mode == "human":
             # The following line copies our drawings from `canvas` to the visible window
             self.window.blit(canvas, canvas.get_rect())
             pygame.event.pump()
@@ -202,6 +211,7 @@ class GridWorldEnv(gym.Env):
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
             )
+        return None
 
     def close(self):
         if self.window is not None:
