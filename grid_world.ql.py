@@ -21,7 +21,9 @@ Register while making
 import gymnasium as gym
 env = gym.make('gridworld.gymnasium_env:GridWorld-v0')
 """
+import argparse
 from collections import defaultdict, namedtuple
+import pickle
 from tqdm import tqdm  # Progress bar
 from matplotlib import pyplot as plt
 import numpy as np
@@ -43,12 +45,12 @@ HyperParams = namedtuple('HyperParams', [
 'learning_rate', 'initial_epsilon', 'epsilon_decay', 'final_epsilon', 'discount_factor'])
 Experience = namedtuple('Experience', ['obs', 'action', 'reward', 'terminated', 'next_obs'])
 
-class GridWorldAgent:
-    """Back jack agent"""
+class Agent:
+    """Grid world agent"""
     def __init__(
         self,
-        env: gym.Env,
         hyper_params: HyperParams,
+        q_values_file=None
     ):
         """Initialize a Q-Learning agent.
 
@@ -60,16 +62,25 @@ class GridWorldAgent:
             final_epsilon: Minimum exploration rate (usually 0.1)
             discount_factor: How much to value future rewards (0-1)
         """
-        self.env = env
+        # self.env = gym.make(GAME_ID)
+        self.env = gym.make(GAME_ID, render_mode="human")
+        self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=N_EPISODES)
+        self.q_values_file = q_values_file
 
         # Q-table: maps (state, action) to expected reward
         # defaultdict automatically creates entries with zeros for new states
-        self.q_values = defaultdict(lambda: np.zeros(self.env.action_space.n))
+        try:
+            with open(q_values_file, 'rb') as f:
+                self.q_values = defaultdict(
+                lambda: np.zeros(self.env.action_space.n), pickle.load(f))
+                self.epsilon = hyper_params.final_epsilon
+        except (OSError, TypeError):
+            self.q_values = defaultdict(lambda: np.zeros(self.env.action_space.n))
+            self.epsilon = hyper_params.initial_epsilon
 
         # How much we care about future rewards
         # Exploration parameters
         self.hyper_params = hyper_params
-        self.epsilon = hyper_params.initial_epsilon
 
         # Track learning progress
         self.training_error = []
@@ -124,14 +135,81 @@ class GridWorldAgent:
         self.hyper_params.final_epsilon, self.epsilon -
         self.hyper_params.epsilon_decay)
 
+    def learn(self):
+        """Create agent, start learning"""
 
-def get_moving_avgs(arr, window, convolution_mode):
-    """Compute moving average to smooth noisy data."""
-    return np.convolve(
-        np.array(arr).flatten(),
-        np.ones(window),
-        mode=convolution_mode
-    ) / window
+
+        for _ in tqdm(range(N_EPISODES)):
+            # Start a new hand
+            obs, _ = self.env.reset()
+            done = False
+
+            # Play one complete hand
+            while not done:
+                # Agent chooses action (initially random, gradually more intelligent)
+                action = self.get_action(obs)
+
+                # Take action and observe result
+                next_obs, reward, terminated, truncated, _ = self.env.step(action)
+
+                # Learn from this experience
+                self.update(Experience(obs, action, reward, terminated, next_obs))
+
+                # Move to next state
+                done = terminated or truncated
+                obs = next_obs
+
+            # Reduce exploration rate (agent becomes less random over time)
+            self.decay_epsilon()
+        try:
+            with open(self.q_values_file, 'wb') as f:
+                pickle.dump(dict(self.q_values), f, pickle.HIGHEST_PROTOCOL)
+        except (OSError, TypeError):
+            pass
+        Plot(self.env).plot()
+
+class Plot:
+    """Results plotter"""
+    def __init__(self, env):
+        self.env = env
+
+    def get_moving_avgs(self, arr, window, convolution_mode):
+        """Compute moving average to smooth noisy data."""
+        return np.convolve(
+            np.array(arr).flatten(),
+            np.ones(window),
+            mode=convolution_mode
+        ) / window
+
+    def plot(self):
+        """Smooth over a 500-episode window"""
+        _, axs = plt.subplots(ncols=2, figsize=(12, 5))
+
+        # Episode rewards (win/loss performance)
+        axs[0].set_title("Episode rewards")
+        reward_moving_average = self.get_moving_avgs(
+            self.env.return_queue,
+            ROLLING_LENGTH,
+            "valid"
+        )
+        axs[0].plot(range(len(reward_moving_average)), reward_moving_average)
+        axs[0].set_ylabel("Average Reward")
+        axs[0].set_xlabel("Episode")
+
+        # Episode times
+        axs[1].set_title("Episode times")
+        length_moving_average = self.get_moving_avgs(
+            self.env.time_queue,
+            ROLLING_LENGTH,
+            "valid"
+        )
+        axs[1].plot(range(len(length_moving_average)), length_moving_average)
+        axs[1].set_ylabel("Average Episode Time")
+        axs[1].set_xlabel("Episode")
+
+        plt.tight_layout()
+        plt.show()
+
 
 
 def init():
@@ -141,78 +219,13 @@ def init():
     env = gym.wrappers.RecordEpisodeStatistics(env, buffer_length=N_EPISODES)
     return env
 
-def learn(env):
-    """Create agent, start learning"""
-
-    agent = GridWorldAgent(
-        env=env,
-        hyper_params=HyperParams(
-        LEARNING_RATE, INITIAL_EPSILON, EPSILON_DECAY, FINAL_EPSILON, DISCOUNT_FACTOR)
-    )
-
-    for _ in tqdm(range(N_EPISODES)):
-        # Start a new hand
-        obs, _ = env.reset()
-        done = False
-
-        # Play one complete hand
-        while not done:
-            # Agent chooses action (initially random, gradually more intelligent)
-            action = agent.get_action(obs)
-
-            # Take action and observe result
-            next_obs, reward, terminated, truncated, _ = env.step(action)
-
-            # Learn from this experience
-            agent.update(Experience(obs, action, reward, terminated, next_obs))
-
-            # Move to next state
-            done = terminated or truncated
-            obs = next_obs
-
-        # Reduce exploration rate (agent becomes less random over time)
-        agent.decay_epsilon()
-    return env, agent
-
-def plot(env, agent):
-    """Smooth over a 500-episode window"""
-    _, axs = plt.subplots(ncols=3, figsize=(12, 5))
-
-    # Episode rewards (win/loss performance)
-    axs[0].set_title("Episode rewards")
-    reward_moving_average = get_moving_avgs(
-        env.return_queue,
-        ROLLING_LENGTH,
-        "valid"
-    )
-    axs[0].plot(range(len(reward_moving_average)), reward_moving_average)
-    axs[0].set_ylabel("Average Reward")
-    axs[0].set_xlabel("Episode")
-
-    # Episode lengths (how many actions per hand)
-    axs[1].set_title("Episode lengths")
-    length_moving_average = get_moving_avgs(
-        env.length_queue,
-        ROLLING_LENGTH,
-        "valid"
-    )
-    axs[1].plot(range(len(length_moving_average)), length_moving_average)
-    axs[1].set_ylabel("Average Episode Length")
-    axs[1].set_xlabel("Episode")
-
-    # Training error (how much we're still learning)
-    axs[2].set_title("Training Error")
-    training_error_moving_average = get_moving_avgs(
-        agent.training_error,
-        ROLLING_LENGTH,
-        "same"
-    )
-    axs[2].plot(range(len(training_error_moving_average)), training_error_moving_average)
-    axs[2].set_ylabel("Temporal Difference Error")
-    axs[2].set_xlabel("Step")
-
-    plt.tight_layout()
-    plt.show()
 
 if __name__ == "__main__":
-    plot(*learn(init()))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", help ='q-value filename')
+    args = parser.parse_args()
+    Agent(
+        hyper_params=HyperParams(
+        LEARNING_RATE, INITIAL_EPSILON, EPSILON_DECAY, FINAL_EPSILON, DISCOUNT_FACTOR),
+        q_values_file=args.f
+    ).learn()
