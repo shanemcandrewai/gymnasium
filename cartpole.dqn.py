@@ -58,13 +58,14 @@ class Agent:
             # self.num_episodes = 600
             self.num_episodes = 200
         else:
-            self.num_episodes = 50
+            # self.num_episodes = 50
+            self.num_episodes = 100
         self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=self.num_episodes)
         self.policy_net = DQN(self.env).to(DEVICE)
         try:
             self.policy_net.load_state_dict(torch.load(file, weights_only=True))
             self.epsilon_initial = 0.2       # Start with fewer random actions
-        except (OSError, TypeError):
+        except (OSError, TypeError, AttributeError):
             self.epsilon_initial = 1.0       # Start with 100% random actions
 
         self.epsilon_decay = self.epsilon_initial / (
