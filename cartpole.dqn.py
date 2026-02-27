@@ -15,9 +15,10 @@ import numpy as np
 import gymnasium as gym
 
 GAME_ID = "CartPole-v1"
-
 # Training hyperparameters
-EPSILON_FINAL = 0.1         # Always keep some exploration
+EPSILON_INITIAL = 0.9       # Start with 100% random actions
+EPSILON_FINAL = 0.01         # Always keep some exploration
+EPSILON_DECAY = 2500
 TAU = 0.005
 LEARNING_RATE = 0.0003
 DISCOUNT_FACTOR = 0.95
@@ -33,6 +34,7 @@ Experience = namedtuple('Experience', ['state', 'action', 'reward', 'terminated'
 
 class DQN(nn.Module):
     """Deep Q-network"""
+
     def __init__(self, env):
         super().__init__()
         self.linear_relu_stack = nn.Sequential(
@@ -50,6 +52,8 @@ class DQN(nn.Module):
 
 class Agent:
     """Agent"""
+    params = {}
+
     def __init__(self, model_file=None, game_id=GAME_ID):
         self.env = gym.make(game_id, render_mode="human")
         self.model_file = model_file
@@ -64,12 +68,10 @@ class Agent:
         self.policy_net = DQN(self.env).to(DEVICE)
         try:
             self.policy_net.load_state_dict(torch.load(model_file, weights_only=True))
-            self.epsilon_initial = 0.2       # Start with fewer random actions
+            self.params['epsilon_initial'] = EPSILON_FINAL  # Start with fewer random actions
         except (OSError, TypeError, AttributeError):
-            self.epsilon_initial = 1.0       # Start with 100% random actions
+            self.params['epsilon_initial'] = EPSILON_INITIAL # Start with 100% random actions
 
-        self.epsilon_decay = self.epsilon_initial / (
-        self.num_episodes / 2)  # Reduce exploration over time
         self.target_net = DQN(self.env).to(DEVICE)
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=LEARNING_RATE, amsgrad=True)
 
@@ -129,8 +131,8 @@ class Agent:
     def select_action(self, policy_net_l, state_l, steps):
         """Select action"""
         sample = random.random()
-        eps_threshold = EPSILON_FINAL + (self.epsilon_initial - EPSILON_FINAL) * \
-            math.exp(-1. * steps / self.epsilon_decay)
+        eps_threshold = EPSILON_FINAL + (self.params['epsilon_initial'] - EPSILON_FINAL) * \
+-            math.exp(-1. * steps / EPSILON_DECAY)
         steps += 1
         if sample > eps_threshold:
             with torch.no_grad():
