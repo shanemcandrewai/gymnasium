@@ -55,7 +55,10 @@ class Agent:
     params = {}
 
     def __init__(self, model_file=None, game_id=GAME_ID):
-        self.env = gym.make(game_id, render_mode="human")
+        if game_id is None:
+            self.env = gym.make(GAME_ID, render_mode="human")
+        else:
+            self.env = gym.make(game_id, render_mode="human")
         # self.env = gym.make(game_id)
         if torch.cuda.is_available() or torch.backends.mps.is_available():
             # self.num_episodes = 600
@@ -234,5 +237,6 @@ class Plot:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", help ='q-value filename')
+    parser.add_argument("-g", help ='Game ID')
     args = parser.parse_args()
-    Agent(args.f).train()
+    Agent(args.f, args.g).train()
