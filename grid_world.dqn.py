@@ -89,10 +89,8 @@ class Agent:
         for _ in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
             state, info = self.env.reset()
-            breakpoint()
-            state = torch.tensor(list(
-            state[x] for x in state), dtype=torch.float32, device=DEVICE)
-            breakpoint()
+            state = torch.tensor(np.concatenate(list(
+            state[x] for x in state)), dtype=torch.float32, device=DEVICE)
             terminated = False
             truncated = False
             while not terminated and not truncated:
