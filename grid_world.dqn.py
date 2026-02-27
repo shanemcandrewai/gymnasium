@@ -38,10 +38,10 @@ class DQN(nn.Module):
 
     def __init__(self, env):
         super().__init__()
-        shape = env.observation_space.shape if env.observation_space.shape is not None else list(
-        y for y in zip(*(env.observation_space[x].shape for x in env.observation_space)))
+        observation_space_num = np.prod(list(y for y in zip(*(
+        env.observation_space[x].shape for x in env.observation_space))))
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(np.prod(shape), NUM_FEATURES),
+            nn.Linear(observation_space_num, NUM_FEATURES),
             nn.ReLU(),
             nn.Linear(NUM_FEATURES, NUM_FEATURES),
             nn.ReLU(),
@@ -89,8 +89,10 @@ class Agent:
         for _ in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
             state, info = self.env.reset()
+            breakpoint()
             state = torch.tensor(list(
-            state[x] for x in state), dtype=torch.float32, device=DEVICE).unsqueeze(0)
+            state[x] for x in state), dtype=torch.float32, device=DEVICE)
+            breakpoint()
             terminated = False
             truncated = False
             while not terminated and not truncated:
