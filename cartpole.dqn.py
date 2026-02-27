@@ -50,9 +50,9 @@ class DQN(nn.Module):
 
 class Agent:
     """Agent"""
-    def __init__(self, file=None, game_id=GAME_ID):
+    def __init__(self, model_file=None, game_id=GAME_ID):
         self.env = gym.make(game_id, render_mode="human")
-        self.file = file
+        self.model_file = model_file
         # self.env = gym.make(game_id)
         if torch.cuda.is_available() or torch.backends.mps.is_available():
             # self.num_episodes = 600
@@ -63,7 +63,7 @@ class Agent:
         self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=self.num_episodes)
         self.policy_net = DQN(self.env).to(DEVICE)
         try:
-            self.policy_net.load_state_dict(torch.load(file, weights_only=True))
+            self.policy_net.load_state_dict(torch.load(model_file, weights_only=True))
             self.epsilon_initial = 0.2       # Start with fewer random actions
         except (OSError, TypeError, AttributeError):
             self.epsilon_initial = 1.0       # Start with 100% random actions
@@ -120,8 +120,8 @@ class Agent:
 
         print('Complete')
         try:
-            torch.save(self.policy_net.state_dict(), "model.pth")
-        except (OSError, TypeError):
+            torch.save(self.policy_net.state_dict(), self.model_file)
+        except (OSError, TypeError, AttributeError):
             pass
         self.env.close()
         Plot(self.env).plot()
