@@ -19,7 +19,6 @@ GAME_ID = "gridworld.gymnasium_env:GridWorld-v0"
 # Training hyperparameters
 EPSILON_INITIAL = 0.9       # Start with 100% random actions
 EPSILON_FINAL = 0.01         # Always keep some exploration
-EPSILON_DECAY = 2500
 TAU = 0.005
 LEARNING_RATE = 0.0003
 DISCOUNT_FACTOR = 0.95
@@ -78,6 +77,8 @@ class Agent:
         except (OSError, TypeError, AttributeError):
             self.params['epsilon_initial'] = EPSILON_INITIAL # Start with 100% random actions
 
+        self.params['epsilon_decay'] = self.params['epsilon_initial'] / (
+        self.num_episodes / 2)  # Reduce exploration over time
         self.target_net = DQN(self.env).to(DEVICE)
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=LEARNING_RATE, amsgrad=True)
 
@@ -90,20 +91,20 @@ class Agent:
             # Initialize the environment and get its state
             state, info = self.env.reset()
             state = torch.tensor(np.concatenate(list(
-            state[x] for x in state)), dtype=torch.float32, device=DEVICE)
+            state[x] for x in state)), dtype=torch.float32, device=DEVICE).unsqueeze(0)
             terminated = False
             truncated = False
             while not terminated and not truncated:
                 action, steps_done = self.select_action(self.policy_net, state,  steps_done)
-                breakpoint()
                 observation, reward, terminated, truncated, info = self.env.step(action.item())
-                reward = torch.tensor([reward], device=DEVICE)
+                reward = torch.tensor([reward], device=DEVICE).unsqueeze(0)
 
                 if terminated:
                     next_state = None
                 else:
-                    next_state = torch.tensor(
-                    observation, dtype=torch.float32, device=DEVICE).unsqueeze(0)
+                    next_state = torch.tensor(np.concatenate(
+                    list(observation[
+                    x] for x in observation)), dtype=torch.float32, device=DEVICE)
 
                 # Store the transition in memory
                 memory.append(Experience(state, action, reward, terminated, next_state))
@@ -140,17 +141,14 @@ class Agent:
         """Select action"""
         sample = random.random()
         eps_threshold = EPSILON_FINAL + (self.params['epsilon_initial'] - EPSILON_FINAL) * \
--            math.exp(-1. * steps / EPSILON_DECAY)
+-            math.exp(-1. * steps / self.params['epsilon_decay'])
         steps += 1
         if sample > eps_threshold:
             with torch.no_grad():
                 # t.max(1) will return the largest column value of each row.
                 # second column on max resul t is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                pol = policy_net_l(state_l)
-                breakpoint()
-                return pol.max(1).indices.view(1, 1), steps
-                # return policy_net_l(state_l).max(1).indices.view(1, 1), steps
+                return policy_net_l(state_l).max(1).indices.view(1, 1), steps
         else:
             return torch.tensor([[
             self.env.action_space.sample()]], device=DEVICE, dtype=torch.long), steps
