@@ -97,14 +97,15 @@ class Agent:
             while not terminated and not truncated:
                 action, steps_done = self.select_action(self.policy_net, state,  steps_done)
                 observation, reward, terminated, truncated, info = self.env.step(action.item())
-                reward = torch.tensor([reward], device=DEVICE).unsqueeze(0)
+                observation = torch.tensor(np.concatenate(list(observation[
+                x] for x in observation)), dtype=torch.float32, device=DEVICE)
+                reward = torch.tensor([reward], device=DEVICE)
 
                 if terminated:
                     next_state = None
                 else:
-                    next_state = torch.tensor(np.concatenate(
-                    list(observation[
-                    x] for x in observation)), dtype=torch.float32, device=DEVICE)
+                    next_state = torch.tensor(
+                    observation, dtype=torch.float32, device=DEVICE).unsqueeze(0)
 
                 # Store the transition in memory
                 memory.append(Experience(state, action, reward, terminated, next_state))
