@@ -18,7 +18,6 @@ GAME_ID = "CartPole-v1"
 # Training hyperparameters
 EPSILON_INITIAL = 0.9       # Start with 100% random actions
 EPSILON_FINAL = 0.01         # Always keep some exploration
-EPSILON_DECAY = 2500
 TAU = 0.005
 LEARNING_RATE = 0.0003
 DISCOUNT_FACTOR = 0.95
@@ -75,6 +74,8 @@ class Agent:
         except (OSError, TypeError, AttributeError):
             self.params['epsilon_initial'] = EPSILON_INITIAL # Start with 100% random actions
 
+        self.params['epsilon_decay'] = self.params['epsilon_initial'] / (
+        self.num_episodes / 2)  # Reduce exploration over time
         self.target_net = DQN(self.env).to(DEVICE)
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=LEARNING_RATE, amsgrad=True)
 
@@ -86,9 +87,7 @@ class Agent:
         for _ in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
             state, info = self.env.reset()
-            breakpoint()
             state = torch.tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0)
-            breakpoint()
             terminated = False
             truncated = False
             while not terminated and not truncated:
@@ -137,7 +136,7 @@ class Agent:
         """Select action"""
         sample = random.random()
         eps_threshold = EPSILON_FINAL + (self.params['epsilon_initial'] - EPSILON_FINAL) * \
--            math.exp(-1. * steps / EPSILON_DECAY)
+-            math.exp(-1. * steps / self.params['epsilon_decay'])
         steps += 1
         if sample > eps_threshold:
             with torch.no_grad():

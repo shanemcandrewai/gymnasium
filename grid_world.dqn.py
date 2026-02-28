@@ -95,6 +95,7 @@ class Agent:
             truncated = False
             while not terminated and not truncated:
                 action, steps_done = self.select_action(self.policy_net, state,  steps_done)
+                breakpoint()
                 observation, reward, terminated, truncated, info = self.env.step(action.item())
                 reward = torch.tensor([reward], device=DEVICE)
 
@@ -146,7 +147,10 @@ class Agent:
                 # t.max(1) will return the largest column value of each row.
                 # second column on max resul t is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                return policy_net_l(state_l).max(1).indices.view(1, 1), steps
+                pol = policy_net_l(state_l)
+                breakpoint()
+                return pol.max(1).indices.view(1, 1), steps
+                # return policy_net_l(state_l).max(1).indices.view(1, 1), steps
         else:
             return torch.tensor([[
             self.env.action_space.sample()]], device=DEVICE, dtype=torch.long), steps
