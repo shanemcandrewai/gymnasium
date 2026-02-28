@@ -58,10 +58,11 @@ class Agent:
 
     def __init__(self, model_file=None, game_id=GAME_ID):
         if game_id is None:
-            self.env = gym.make(GAME_ID, render_mode="human")
+            # self.env = gym.make(GAME_ID, render_mode="human")
+            self.env = gym.make(GAME_ID)
         else:
-            self.env = gym.make(game_id, render_mode="human")
-        # self.env = gym.make(game_id)
+            # self.env = gym.make(game_id, render_mode="human")
+            self.env = gym.make(game_id)
         if torch.cuda.is_available() or torch.backends.mps.is_available():
             self.num_episodes = 600
         else:
@@ -89,16 +90,16 @@ class Agent:
         episode = 0
         for episode in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
-            state, info = self.env.reset()
+            state, _ = self.env.reset()
             state = torch.tensor(np.concatenate(list(
             state[x] for x in state)), dtype=torch.float32, device=DEVICE).unsqueeze(0)
             terminated = False
             truncated = False
             while not terminated and not truncated:
                 action, steps_done = self.select_action(self.policy_net, state,  steps_done)
-                observation, reward, terminated, truncated, info = self.env.step(action.item())
-                observation = torch.tensor(np.concatenate(list(observation[
-                x] for x in observation)), dtype=torch.float32, device=DEVICE)
+                observation, reward, terminated, truncated, _ = self.env.step(action.item())
+                observation = np.concatenate(list(observation[
+                x] for x in observation))
                 reward = torch.tensor([reward], device=DEVICE)
 
                 if terminated:
@@ -127,8 +128,6 @@ class Agent:
                     target_net_state_dict[key] = policy_net_state_dict[
                         key]*TAU + target_net_state_dict[key]*(1-TAU)
                 self.target_net.load_state_dict(target_net_state_dict)
-            if info['episode']['l'] >= 500:
-                break
 
         print('Complete')
         self.env.close()
