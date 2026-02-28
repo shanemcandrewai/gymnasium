@@ -60,11 +60,11 @@ class Agent:
             self.env = gym.make(game_id, render_mode="human")
         # self.env = gym.make(game_id)
         if torch.cuda.is_available() or torch.backends.mps.is_available():
-            # self.num_episodes = 600
-            self.num_episodes = 200
+            self.num_episodes = 600
+            # self.num_episodes = 200
         else:
             # self.num_episodes = 50
-            self.num_episodes = 100
+            self.num_episodes = 200
         self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=self.num_episodes)
         self.model_file = model_file
         self.policy_net = DQN(self.env).to(DEVICE)
