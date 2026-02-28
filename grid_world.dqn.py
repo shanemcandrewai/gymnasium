@@ -63,11 +63,10 @@ class Agent:
             self.env = gym.make(game_id, render_mode="human")
         # self.env = gym.make(game_id)
         if torch.cuda.is_available() or torch.backends.mps.is_available():
-            # self.num_episodes = 600
-            self.num_episodes = 200
+            self.num_episodes = 600
         else:
             # self.num_episodes = 50
-            self.num_episodes = 100
+            self.num_episodes = 200
         self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=self.num_episodes)
         self.model_file = model_file
         self.policy_net = DQN(self.env).to(DEVICE)
@@ -87,7 +86,8 @@ class Agent:
         self.target_net.load_state_dict(self.policy_net.state_dict())
         memory = []
         steps_done = 0
-        for _ in tqdm(range(self.num_episodes)):
+        episode = 0
+        for episode in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
             state, info = self.env.reset()
             state = torch.tensor(np.concatenate(list(
@@ -131,12 +131,13 @@ class Agent:
                 break
 
         print('Complete')
-        try:
-            torch.save(self.policy_net.state_dict(), self.model_file)
-        except (OSError, TypeError, AttributeError):
-            pass
         self.env.close()
-        Plot(self.env).plot()
+        if episode > 1:
+            try:
+                torch.save(self.policy_net.state_dict(), self.model_file)
+            except (OSError, TypeError, AttributeError):
+                pass
+            Plot(self.env).plot()
 
     def select_action(self, policy_net_l, state_l, steps):
         """Select action"""
