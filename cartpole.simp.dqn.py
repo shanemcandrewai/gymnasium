@@ -91,7 +91,8 @@ class Agent:
             terminated = False
             truncated = False
             while not terminated and not truncated:
-                action, steps_done = self.select_action(self.policy_net, state,  steps_done)
+                action, steps_done = self.select_action(
+                self.policy_net, state,  steps_done, episode)
                 observation, reward, terminated, truncated, info = self.env.step(action.item())
                 reward = torch.tensor([reward], device=DEVICE)
 
@@ -133,10 +134,10 @@ class Agent:
                 pass
             Plot(self.env).plot()
 
-    def select_action(self, policy_net_l, state_l, steps):
+    def select_action(self, policy_net_l, state_l, steps, episode):
         """Select action"""
         steps += 1
-        decay = math.exp(-1. * steps / self.params['epsilon_decay'])
+        decay = math.exp(-1. * episode / self.params['epsilon_decay'])
         eps_threshold = EPSILON_FINAL + (self.params['epsilon_initial'] - EPSILON_FINAL) * decay
         if random.random() > eps_threshold:
             with torch.no_grad():
