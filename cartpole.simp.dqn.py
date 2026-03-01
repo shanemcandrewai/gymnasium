@@ -87,20 +87,20 @@ class Agent:
         for episode in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
             state, info = self.env.reset()
-            state = torch.tensor(state, dtype=torch.float32, device=DEVICE).unsqueeze(0)
+            state = torch.tensor(state, dtype=torch.float32, device=DEVICE)
             terminated = False
             truncated = False
             while not terminated and not truncated:
                 action, steps_done = self.select_action(
                 self.policy_net, state,  steps_done, episode)
-                observation, reward, terminated, truncated, info = self.env.step(action.item())
+                observation, reward, terminated, truncated, info = self.env.step(action)
                 reward = torch.tensor([reward], device=DEVICE)
 
                 if terminated:
                     next_state = None
                 else:
                     next_state = torch.tensor(
-                    observation, dtype=torch.float32, device=DEVICE).unsqueeze(0)
+                    observation, dtype=torch.float32, device=DEVICE)
 
                 # Store the transition in memory
                 memory.append(Experience(state, action, reward, terminated, next_state))
@@ -137,6 +137,7 @@ class Agent:
     def select_action(self, policy_net_l, state_l, steps, episode):
         """Select action"""
         steps += 1
+        action = -1
         decay = math.exp(-1. * episode / self.params['epsilon_decay'])
         eps_threshold = EPSILON_FINAL + (self.params['epsilon_initial'] - EPSILON_FINAL) * decay
         if random.random() > eps_threshold:
@@ -144,10 +145,10 @@ class Agent:
                 # t.max(1) will return the largest column value of each row.
                 # second column on max resul t is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                return policy_net_l(state_l).max(1).indices.view(1, 1), steps
+                action = np.int64(policy_net_l(state_l).argmax())
         else:
-            return torch.tensor([[
-            self.env.action_space.sample()]], device=DEVICE, dtype=torch.long), steps
+            action = self.env.action_space.sample()
+        return action, steps
 
     def optimize_model(self, optimizer_l, transitions):
         """Optimize model"""
@@ -163,12 +164,14 @@ class Agent:
         non_final_next_states = torch.cat([s for s in batch.next_state
                                                     if s is not None])
         state_batch = torch.cat(batch.state)
-        action_batch = torch.cat(batch.action)
+        action_batch = torch.tensor(batch.action, device=DEVICE, dtype=torch.long).unsqueeze(1)
         reward_batch = torch.cat(batch.reward)
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
         # for each batch state according to policy_net
+
+        state_batch = torch.tensor(np.array(batch.state))
         state_action_values = self.policy_net(state_batch).gather(1, action_batch)
 
         # Compute V(s_{t+1}) for all next states.
@@ -178,8 +181,10 @@ class Agent:
         # state value or 0 in case the state was final.
         next_state_values = torch.zeros(BATCH_SIZE, device=DEVICE)
         with torch.no_grad():
+            breakpoint()
             next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values
         # Compute the expected Q values
+        breakpoint()
         expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
         # Compute Huber loss
