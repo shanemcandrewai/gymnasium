@@ -161,13 +161,13 @@ class Agent:
         s for s in batch.next_state if s is not None])
 
         state_batch = torch.tensor(batch.state)
-        action_batch = torch.tensor([[a] for a in batch.action], dtype=torch.int64)
+        action_batch = torch.tensor(list(batch.action))
         reward_batch = torch.tensor(batch.reward)
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
         # for each batch state according to policy_net
-        state_action_values = self.policy_net(state_batch).gather(1, action_batch)
+        state_action_values = self.policy_net(state_batch).gather(1, action_batch.unsqueeze(1))
 
         # Compute V(s_{t+1}) for all next states.
         # Expected values of actions for non_final_next_states are computed based
@@ -181,8 +181,7 @@ class Agent:
         expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
         # Compute Huber loss
-        criterion = nn.SmoothL1Loss()
-        loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
+        loss = nn.SmoothL1Loss()(state_action_values, expected_state_action_values.unsqueeze(1))
 
         # Optimize the model
         optimizer.zero_grad()
