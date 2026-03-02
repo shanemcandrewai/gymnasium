@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CartPole-v1 cleaned up and converted to DQN
+"""cartpole.dqn.py adapted to gridworld.gymnasium_env:GridWorld-v0
 https://docs.pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 https://gymnasium.farama.org/introduction/train_agent/"""
 import argparse
