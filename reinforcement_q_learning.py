@@ -1,6 +1,8 @@
 """
 CartPole-v1 DQN linted, cleaned up from
+https://github.com/pytorch/tutorials/blob/main/intermediate_source/reinforcement_q_learning.py
 https://docs.pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+
 Reinforcement Learning (DQN) Tutorial
 =====================================
 **Author**: `Adam Paszke <https://github.com/apaszke>`_
