@@ -87,14 +87,14 @@ class Agent:
         for episode in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
             state, info = self.env.reset()
-            state = torch.tensor(state, dtype=torch.float32, device=DEVICE)
+            # state = torch.tensor(state, dtype=torch.float32, device=DEVICE)
             terminated = False
             truncated = False
             while not terminated and not truncated:
                 action, steps_done = self.select_action(
                 self.policy_net, state,  steps_done, episode)
                 observation, reward, terminated, truncated, info = self.env.step(action)
-                reward = torch.tensor([reward], device=DEVICE)
+                # reward = torch.tensor([reward], device=DEVICE)
 
                 if terminated:
                     next_state = None
@@ -145,7 +145,7 @@ class Agent:
                 # t.max(1) will return the largest column value of each row.
                 # second column on max resul t is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                action = np.int64(policy_net(state).argmax())
+                action = np.int64(policy_net(torch.tensor(state)).argmax())
         else:
             action = self.env.action_space.sample()
         return action, steps
@@ -156,6 +156,7 @@ class Agent:
         # detailed explanation). This converts batch-array of Transitions
         # to Transition of batch-arrays.
         batch = Experience(*zip(*transitions))
+        breakpoint()
 
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)

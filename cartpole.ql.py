@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""CartPole-v1 cleaned up and adapted https://gymnasium.farama.org/introduction/train_agent/"""
+"""CartPole-v1 cleaned up and adapted from Blackjack-v1
+https://gymnasium.farama.org/introduction/train_agent/"""
 import argparse
 from collections import defaultdict, namedtuple
 import pickle
