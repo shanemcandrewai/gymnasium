@@ -99,8 +99,9 @@ class Agent:
                 if terminated:
                     next_state = None
                 else:
-                    next_state = torch.tensor(
-                    observation, dtype=torch.float32, device=DEVICE)
+                    # next_state = torch.tensor(
+                    # observation, dtype=torch.float32, device=DEVICE)
+                    next_state = observation
 
                 # Store the transition in memory
                 memory.append(Experience(state, action, reward, terminated, next_state))
