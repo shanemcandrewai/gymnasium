@@ -134,7 +134,7 @@ class Agent:
                 pass
             Plot(self.env).plot()
 
-    def select_action(self, policy_net_l, state_l, steps, episode):
+    def select_action(self, policy_net, state, steps, episode):
         """Select action"""
         steps += 1
         action = -1
@@ -145,12 +145,12 @@ class Agent:
                 # t.max(1) will return the largest column value of each row.
                 # second column on max resul t is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                action = np.int64(policy_net_l(state_l).argmax())
+                action = np.int64(policy_net(state).argmax())
         else:
             action = self.env.action_space.sample()
         return action, steps
 
-    def optimize_model(self, optimizer_l, transitions):
+    def optimize_model(self, optimizer, transitions):
         """Optimize model"""
         # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
         # detailed explanation). This converts batch-array of Transitions
@@ -190,11 +190,11 @@ class Agent:
         loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
 
         # Optimize the model
-        optimizer_l.zero_grad()
+        optimizer.zero_grad()
         loss.backward()
         # In-place gradient clipping
         torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
-        optimizer_l.step()
+        optimizer.step()
 
 class Plot:
     """Results plotter"""
