@@ -87,20 +87,16 @@ class Agent:
         for episode in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
             state, info = self.env.reset()
-            # state = torch.tensor(state, dtype=torch.float32, device=DEVICE)
             terminated = False
             truncated = False
             while not terminated and not truncated:
                 action, steps_done = self.select_action(
                 self.policy_net, state,  steps_done, episode)
                 observation, reward, terminated, truncated, info = self.env.step(action)
-                # reward = torch.tensor([reward], device=DEVICE)
 
                 if terminated:
                     next_state = None
                 else:
-                    # next_state = torch.tensor(
-                    # observation, dtype=torch.float32, device=DEVICE)
                     next_state = observation
 
                 # Store the transition in memory
@@ -178,7 +174,7 @@ class Agent:
         # on the "older" target_net; selecting their best reward with max(1).values
         # This is merged based on the mask, such that we'll have either the expected
         # state value or 0 in case the state was final.
-        next_state_values = torch.zeros(BATCH_SIZE, device=DEVICE)
+        next_state_values = torch.zeros(BATCH_SIZE)
         with torch.no_grad():
             next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values
         # Compute the expected Q values
