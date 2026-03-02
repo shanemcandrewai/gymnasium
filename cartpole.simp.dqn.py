@@ -157,23 +157,20 @@ class Agent:
         # detailed explanation). This converts batch-array of Transitions
         # to Transition of batch-arrays.
         batch = Experience(*zip(*transitions))
-        breakpoint()
 
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)
-        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                              batch.next_state)), device=DEVICE, dtype=torch.bool)
-        non_final_next_states = torch.cat([
-        s.unsqueeze(0) for s in batch.next_state if s is not None])
-        state_batch = torch.cat(batch.state)
-        action_batch = torch.tensor(batch.action, device=DEVICE, dtype=torch.long).unsqueeze(1)
-        reward_batch = torch.cat(batch.reward)
+        non_final_mask = np.array([isinstance(s, np.ndarray) for s in batch.next_state])
+        non_final_next_states = torch.tensor([
+        s for s in batch.next_state if s is not None])
+
+        state_batch = torch.tensor(batch.state)
+        action_batch = torch.tensor([[a] for a in batch.action], dtype=torch.int64)
+        reward_batch = torch.tensor(batch.reward)
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
         # for each batch state according to policy_net
-
-        state_batch = torch.tensor(np.array(batch.state))
         state_action_values = self.policy_net(state_batch).gather(1, action_batch)
 
         # Compute V(s_{t+1}) for all next states.
