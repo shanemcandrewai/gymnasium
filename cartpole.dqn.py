@@ -87,6 +87,7 @@ class Agent:
         for episode in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
             state, info = self.env.reset()
+            state = torch.tensor(state).to(DEVICE)
             terminated = False
             truncated = False
             while not terminated and not truncated:
@@ -97,7 +98,7 @@ class Agent:
                 if terminated:
                     next_state = None
                 else:
-                    next_state = observation
+                    next_state = torch.tensor(observation).to(DEVICE)
 
                 # Store the transition in memory
                 memory.append(Experience(state, action, reward, terminated, next_state))
@@ -142,7 +143,7 @@ class Agent:
                 # t.max(1) will return the largest column value of each row.
                 # second column on max resul t is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                logits = policy_net(torch.tensor(state).to(DEVICE))
+                logits = policy_net(state)
                 action = np.int64(logits.argmax().cpu())
         else:
             action = self.env.action_space.sample()
@@ -158,8 +159,7 @@ class Agent:
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)
         non_final_mask = np.array([isinstance(s, np.ndarray) for s in batch.next_state])
-        non_final_next_states = torch.tensor([
-        s for s in batch.next_state if s is not None]).to(DEVICE)
+        non_final_next_states = [s for s in batch.next_state if s is not None]
 
         state_batch = torch.tensor(batch.state).to(DEVICE)
         action_batch = torch.tensor(list(batch.action)).to(DEVICE)
