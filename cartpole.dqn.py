@@ -142,7 +142,8 @@ class Agent:
                 # t.max(1) will return the largest column value of each row.
                 # second column on max resul t is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                action = np.int64(policy_net(torch.tensor(state)).argmax())
+                logits = policy_net(torch.tensor(state).to(DEVICE))
+                action = np.int64(logits.argmax().cpu())
         else:
             action = self.env.action_space.sample()
         return action, steps
@@ -158,11 +159,11 @@ class Agent:
         # (a final state would've been the one after which simulation ended)
         non_final_mask = np.array([isinstance(s, np.ndarray) for s in batch.next_state])
         non_final_next_states = torch.tensor([
-        s for s in batch.next_state if s is not None])
+        s for s in batch.next_state if s is not None]).to(DEVICE)
 
-        state_batch = torch.tensor(batch.state)
-        action_batch = torch.tensor(list(batch.action))
-        reward_batch = torch.tensor(batch.reward)
+        state_batch = torch.tensor(batch.state).to(DEVICE)
+        action_batch = torch.tensor(list(batch.action)).to(DEVICE)
+        reward_batch = torch.tensor(batch.reward).to(DEVICE)
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
@@ -174,7 +175,7 @@ class Agent:
         # on the "older" target_net; selecting their best reward with max(1).values
         # This is merged based on the mask, such that we'll have either the expected
         # state value or 0 in case the state was final.
-        next_state_values = torch.zeros(BATCH_SIZE)
+        next_state_values = torch.zeros(BATCH_SIZE).to(DEVICE)
         with torch.no_grad():
             next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values
         # Compute the expected Q values
