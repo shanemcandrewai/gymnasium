@@ -210,16 +210,6 @@ class Plot:
         plt.tight_layout()
         plt.show()
 
-
-
-def init():
-    """Initialise environment"""
-    # env = gym.make(GAME_ID)
-    env = gym.make(GAME_ID, render_mode="human")
-    env = gym.wrappers.RecordEpisodeStatistics(env, buffer_length=N_EPISODES)
-    return env
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", help ='q-value filename')
