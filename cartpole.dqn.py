@@ -142,7 +142,7 @@ class Agent:
                 # t.max(1) will return the largest column value of each row.
                 # second column on max resul t is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                logits = policy_net(torch.tensor(state).to(DEVICE))
+                logits = policy_net(torch.from_numpy(np.array(state)).to(DEVICE))
                 action = np.int64(logits.argmax().cpu())
         else:
             action = self.env.action_space.sample()
