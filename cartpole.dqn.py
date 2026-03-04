@@ -55,10 +55,10 @@ class Agent:
 
     def __init__(self, model_file=None, game_id=GAME_ID):
         if game_id is None:
-            self.env = gym.make(GAME_ID, render_mode="human")
+            self.env = gym.make(GAME_ID)
+            # self.env = gym.make(GAME_ID, render_mode="human")
         else:
-            self.env = gym.make(game_id, render_mode="human")
-        # self.env = gym.make(game_id)
+            self.env = gym.make(game_id)
         if torch.cuda.is_available() or torch.backends.mps.is_available():
             self.num_episodes = 600
         else:
@@ -71,7 +71,7 @@ class Agent:
             self.policy_net.load_state_dict(torch.load(model_file, weights_only=True))
             self.params['epsilon_initial'] = EPSILON_FINAL  # Start with fewer random actions
         except (OSError, TypeError, AttributeError):
-            self.params['epsilon_initial'] = EPSILON_INITIAL # Start with 100% random actions
+            self.params['epsilon_initial'] = EPSILON_INITIAL # Start with mostly random actions
 
         self.params['epsilon_decay'] = self.params['epsilon_initial'] / (
         self.num_episodes / 2)  # Reduce exploration over time
