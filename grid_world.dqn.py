@@ -67,7 +67,7 @@ class Agent:
             self.num_episodes = 600
         else:
             # self.num_episodes = 50
-            self.num_episodes = 200
+            self.num_episodes = 600
         self.env = gym.wrappers.RecordEpisodeStatistics(self.env, buffer_length=self.num_episodes)
         self.model_file = model_file
         self.policy_net = DQN(self.env).to(DEVICE)
@@ -140,7 +140,7 @@ class Agent:
         if self.params['epsilon_initial'] == EPSILON_FINAL:
             eps_threshold = EPSILON_FINAL
         else:
-            decay_rate = math.exp(-3 * episode / self.num_episodes)
+            decay_rate = math.exp(-2 * episode / self.num_episodes)
             eps_threshold = np.clip(decay_rate, EPSILON_FINAL, self.params['epsilon_initial'])
         if random.random() > eps_threshold:
             with torch.no_grad():
