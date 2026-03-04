@@ -137,10 +137,10 @@ class Agent:
         """Select action"""
         steps += 1
         action = -1
-        if self.params['epsilon_initial'] == EPSILON_INITIAL:
-            eps_threshold = EPSILON_INITIAL
+        if self.params['epsilon_initial'] == EPSILON_FINAL:
+            eps_threshold = EPSILON_FINAL
         else:
-            decay_rate = math.exp(-5 * episode / self.num_episodes)
+            decay_rate = math.exp(-3 * episode / self.num_episodes)
             eps_threshold = np.clip(decay_rate, EPSILON_FINAL, self.params['epsilon_initial'])
         if random.random() > eps_threshold:
             with torch.no_grad():
