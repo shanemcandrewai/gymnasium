@@ -91,16 +91,18 @@ class Agent:
         for episode in tqdm(range(self.num_episodes)):
             # Initialize the environment and get its state
             state, _ = self.env.reset()
+            state = np.concatenate([state[x] for x in state], dtype=np.float32)
             terminated = False
             truncated = False
             while not terminated and not truncated:
                 action, steps_done = self.select_action(
                 self.policy_net, state,  steps_done, episode)
-                observation, reward, terminated, truncated, _ = self.env.step(action)
+                obs, reward, terminated, truncated, _ = self.env.step(action)
+
                 if terminated:
                     next_state = None
                 else:
-                    next_state = observation
+                    next_state = np.concatenate([obs[x] for x in obs], dtype=np.float32)
 
                 # Store the transition in memory
                 memory.append(Experience(state, action, reward, terminated, next_state))
@@ -143,7 +145,7 @@ class Agent:
                 # t.max(1) will return the largest column value of each row.
                 # second column on max resul t is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                logits = policy_net(torch.tensor(state).to(DEVICE))
+                logits = policy_net(torch.from_numpy(state).to(DEVICE))
                 action = np.int64(logits.argmax().cpu())
         else:
             action = self.env.action_space.sample()
@@ -159,12 +161,12 @@ class Agent:
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)
         non_final_mask = np.array([isinstance(s, np.ndarray) for s in batch.next_state])
-        non_final_next_states = torch.tensor(np.array([
+        non_final_next_states = torch.from_numpy(np.array([
         s for s in batch.next_state if s is not None])).to(DEVICE)
 
-        state_batch = torch.tensor(batch.state).to(DEVICE)
-        action_batch = torch.tensor(list(batch.action)).to(DEVICE)
-        reward_batch = torch.tensor(batch.reward).to(DEVICE)
+        state_batch = torch.from_numpy(np.array(batch.state)).to(DEVICE)
+        action_batch = torch.from_numpy(np.array(list(batch.action))).to(DEVICE)
+        reward_batch = torch.from_numpy(np.array(batch.reward)).to(DEVICE)
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
