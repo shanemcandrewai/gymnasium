@@ -18,7 +18,7 @@ GAME_ID = "gridworld.gymnasium_env:GridWorld-v0"
 
 # Training hyperparameters
 EPSILON_INITIAL = 0.9       # Start with 100% random actions
-EPSILON_FINAL = 0.01         # Always keep some exploration
+EPSILON_FINAL = 0.05         # Always keep some exploration
 TAU = 0.005
 LEARNING_RATE = 0.0003
 DISCOUNT_FACTOR = 0.95
