@@ -77,8 +77,7 @@ class Agent:
         except (OSError, TypeError, AttributeError):
             self.params['epsilon_initial'] = EPSILON_INITIAL # Start with 100% random actions
 
-        self.params['epsilon_decay'] = self.params['epsilon_initial'] / (
-        self.num_episodes / 2)  # Reduce exploration over time
+        self.params['epsilon_decay'] = self.num_episodes
         self.target_net = DQN(self.env).to(DEVICE)
         self.optimizer = optim.AdamW(self.policy_net.parameters(), lr=LEARNING_RATE, amsgrad=True)
 
