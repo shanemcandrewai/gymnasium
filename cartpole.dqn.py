@@ -158,12 +158,12 @@ class Agent:
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)
         non_final_mask = np.array([isinstance(s, np.ndarray) for s in batch.next_state])
-        non_final_next_states = torch.tensor(np.array([
+        non_final_next_states = torch.from_numpy(np.array([
         s for s in batch.next_state if s is not None])).to(DEVICE)
 
-        state_batch = torch.tensor(batch.state).to(DEVICE)
-        action_batch = torch.tensor(list(batch.action)).to(DEVICE)
-        reward_batch = torch.tensor(batch.reward).to(DEVICE)
+        state_batch = torch.from_numpy(np.array(batch.state)).to(DEVICE)
+        action_batch = torch.from_numpy(np.array(list(batch.action))).to(DEVICE)
+        reward_batch = torch.from_numpy(np.array(batch.reward)).to(DEVICE)
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
