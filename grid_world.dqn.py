@@ -137,8 +137,11 @@ class Agent:
         """Select action"""
         steps += 1
         action = -1
-        decay = math.exp(-1. * episode / self.params['epsilon_decay'])
-        eps_threshold = EPSILON_FINAL + (self.params['epsilon_initial'] - EPSILON_FINAL) * decay
+        if self.params['epsilon_initial'] == EPSILON_INITIAL:
+            eps_threshold = EPSILON_INITIAL
+        else:
+            decay_rate = math.exp(-5 * episode / self.num_episodes)
+            eps_threshold = np.clip(decay_rate, EPSILON_FINAL, self.params['epsilon_initial'])
         if random.random() > eps_threshold:
             with torch.no_grad():
                 # t.max(1) will return the largest column value of each row.
