@@ -79,13 +79,13 @@ class GridWorldEnv(gym.Env):
         self.metadata['render_mode'] = render_mode
 
         """
-        If human-rendering is used, `self.window` will be a reference
+        If human-rendering is used, `self.screen` will be a reference
         to the window that we draw to. `self.clock` will be a clock that is used
         to ensure that the environment is rendered at the correct framerate in
         human-mode. They will remain `None` until human-mode is used for the
         first time.
         """
-        self.window = None
+        self.screen = None
         self.clock = None
         self._agent_location = None
         self._target_location = None
@@ -154,10 +154,9 @@ class GridWorldEnv(gym.Env):
         return None
 
     def _render_frame(self):
-        if self.window is None and self.metadata['render_mode'] == "human":
+        if self.screen is None and self.metadata['render_mode'] == "human":
             pygame.init()
-            pygame.display.init()
-            self.window = pygame.display.set_mode((
+            self.screen = pygame.display.set_mode((
             self.metadata['window_size'], self.metadata['window_size']))
         if self.clock is None and self.metadata['render_mode'] == "human":
             self.clock = pygame.time.Clock()
@@ -204,9 +203,8 @@ class GridWorldEnv(gym.Env):
 
         if self.metadata['render_mode'] == "human":
             # The following line copies our drawings from `canvas` to the visible window
-            self.window.blit(canvas, canvas.get_rect())
-            pygame.event.pump()
-            pygame.display.update()
+            self.screen.blit(canvas, canvas.get_rect())
+            pygame.display.flip()
 
             # We need to ensure that human-rendering occurs at the predefined framerate.
             # The following line will automatically add a delay to
@@ -236,6 +234,5 @@ class GridWorldEnv(gym.Env):
         return None
 
     def close(self):
-        if self.window is not None:
-            pygame.display.quit()
+        if self.screen is not None:
             pygame.quit()
