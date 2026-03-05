@@ -161,15 +161,14 @@ class GridWorldEnv(gym.Env):
         if self.clock is None and self.metadata['render_mode'] == "human":
             self.clock = pygame.time.Clock()
 
-        canvas = pygame.Surface((self.metadata['window_size'], self.metadata['window_size']))
-        canvas.fill((255, 255, 255))
+        self.screen.fill((255, 255, 255))
         pix_square_size = (
             self.metadata['window_size'] / self.metadata['size']
         )  # The size of a single grid square in pixels
 
         # First we draw the target
         pygame.draw.rect(
-            canvas,
+            self.screen,
             (255, 0, 0),
             pygame.Rect(
                 pix_square_size * self._target_location,
@@ -178,7 +177,7 @@ class GridWorldEnv(gym.Env):
         )
         # Now we draw the agent
         pygame.draw.circle(
-            canvas,
+            self.screen,
             (0, 0, 255),
             (self._agent_location + 0.5) * pix_square_size,
             pix_square_size / 3,
@@ -187,14 +186,14 @@ class GridWorldEnv(gym.Env):
         # Finally, add some gridlines
         for x in range(self.metadata['size'] + 1):
             pygame.draw.line(
-                canvas,
+                self.screen,
                 0,
                 (0, pix_square_size * x),
                 (self.metadata['window_size'], pix_square_size * x),
                 width=3,
             )
             pygame.draw.line(
-                canvas,
+                self.screen,
                 0,
                 (pix_square_size * x, 0),
                 (pix_square_size * x, self.metadata['window_size']),
@@ -203,7 +202,7 @@ class GridWorldEnv(gym.Env):
 
         if self.metadata['render_mode'] == "human":
             # The following line copies our drawings from `canvas` to the visible window
-            self.screen.blit(canvas, canvas.get_rect())
+            # self.screen.blit(canvas, canvas.get_rect())
             pygame.display.flip()
 
             # We need to ensure that human-rendering occurs at the predefined framerate.
@@ -229,7 +228,7 @@ class GridWorldEnv(gym.Env):
 
         else:  # rgb_array
             return np.transpose(
-                np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
+                np.array(pygame.surfarray.pixels3d(self.screen)), axes=(1, 0, 2)
             )
         return None
 
