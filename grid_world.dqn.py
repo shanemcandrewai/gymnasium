@@ -113,7 +113,7 @@ class Agent:
                 if len(memory) >= BATCH_SIZE:
                     self.optimize_model(
                     self.optimizer, random.sample(
-                    memory, BATCH_SIZE))
+                    memory, BATCH_SIZE), self.policy_net, self.target_net)
 
                 # Soft update of the target network's weights
                 # θ′ ← τ θ + (1 −τ )θ′
@@ -153,7 +153,7 @@ class Agent:
             action = self.env.action_space.sample()
         return action, steps
 
-    def optimize_model(self, optimizer, transitions):
+    def optimize_model(self, optimizer, transitions, policy_net, target_net):
         """Optimize model"""
         # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
         # detailed explanation). This converts batch-array of Transitions
@@ -173,7 +173,7 @@ class Agent:
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
         # for each batch state according to policy_net
-        state_action_values = self.policy_net(state_batch).gather(1, action_batch.unsqueeze(1))
+        state_action_values = policy_net(state_batch).gather(1, action_batch.unsqueeze(1))
 
         # Compute V(s_{t+1}) for all next states.
         # Expected values of actions for non_final_next_states are computed based
@@ -182,7 +182,7 @@ class Agent:
         # state value or 0 in case the state was final.
         next_state_values = torch.zeros(BATCH_SIZE).to(DEVICE)
         with torch.no_grad():
-            next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1).values
+            next_state_values[non_final_mask] = target_net(non_final_next_states).max(1).values
         # Compute the expected Q values
         expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
@@ -193,7 +193,7 @@ class Agent:
         optimizer.zero_grad()
         loss.backward()
         # In-place gradient clipping
-        torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
+        torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
         optimizer.step()
 
 class Plot:
