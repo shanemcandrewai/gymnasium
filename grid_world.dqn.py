@@ -61,8 +61,8 @@ class Agent:
             self.env = gym.make(GAME_ID, render_mode="human")
             # self.env = gym.make(GAME_ID)
         else:
-            # self.env = gym.make(game_id, render_mode="human")
-            self.env = gym.make(game_id)
+            self.env = gym.make(game_id, render_mode="human")
+            # self.env = gym.make(game_id)
         if torch.cuda.is_available() or torch.backends.mps.is_available():
             self.num_episodes = 600
         else:

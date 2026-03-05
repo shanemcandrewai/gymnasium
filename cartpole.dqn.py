@@ -55,8 +55,8 @@ class Agent:
 
     def __init__(self, model_file=None, game_id=GAME_ID):
         if game_id is None:
-            self.env = gym.make(GAME_ID)
-            # self.env = gym.make(GAME_ID, render_mode="human")
+            # self.env = gym.make(GAME_ID)
+            self.env = gym.make(GAME_ID, render_mode="human")
         else:
             self.env = gym.make(game_id)
         if torch.cuda.is_available() or torch.backends.mps.is_available():
