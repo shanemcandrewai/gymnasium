@@ -31,6 +31,8 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
+SLOW = 4
+
 class Actions(Enum):
     """Actions"""
     RIGHT = 0
@@ -43,7 +45,7 @@ class GridWorldEnv(gym.Env):
     """Grid world environment"""
     # metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
     metadata = {"render_modes": [
-    "human", "rgb_array"], "render_fps": 600, "step": 0, "distance": -1, "terminated":
+    "human", "rgb_array"], "render_fps": SLOW, "step": 0, "distance": -1, "terminated":
         False, "direct": True}
 
     def __init__(self, render_mode=None, size=5):
@@ -154,21 +156,25 @@ class GridWorldEnv(gym.Env):
         return None
 
     def _render_frame(self):
-        if self.screen is None and self.metadata['render_mode'] == "human":
-            pygame.init()
-            self.screen = pygame.display.set_mode((
-            self.metadata['window_size'], self.metadata['window_size']))
-        if self.clock is None and self.metadata['render_mode'] == "human":
-            self.clock = pygame.time.Clock()
+        if self.metadata['render_mode'] == "human":
+            if self.screen is None:
+                pygame.init()
+                self.screen = pygame.display.set_mode((
+                self.metadata['window_size'], self.metadata['window_size']))
+                pygame.display.set_caption('Grid World')
+            if self.clock is None:
+                self.clock = pygame.time.Clock()
+            self.metadata['refresh_rate'] = pygame.display.get_current_refresh_rate()
 
-        self.screen.fill((255, 255, 255))
+        canvas = pygame.Surface((self.metadata['window_size'], self.metadata['window_size']))
+        canvas.fill((255, 255, 255))
         pix_square_size = (
             self.metadata['window_size'] / self.metadata['size']
         )  # The size of a single grid square in pixels
 
         # First we draw the target
         pygame.draw.rect(
-            self.screen,
+            canvas,
             (255, 0, 0),
             pygame.Rect(
                 pix_square_size * self._target_location,
@@ -177,7 +183,7 @@ class GridWorldEnv(gym.Env):
         )
         # Now we draw the agent
         pygame.draw.circle(
-            self.screen,
+            canvas,
             (0, 0, 255),
             (self._agent_location + 0.5) * pix_square_size,
             pix_square_size / 3,
@@ -186,14 +192,14 @@ class GridWorldEnv(gym.Env):
         # Finally, add some gridlines
         for x in range(self.metadata['size'] + 1):
             pygame.draw.line(
-                self.screen,
+                canvas,
                 0,
                 (0, pix_square_size * x),
                 (self.metadata['window_size'], pix_square_size * x),
                 width=3,
             )
             pygame.draw.line(
-                self.screen,
+                canvas,
                 0,
                 (pix_square_size * x, 0),
                 (pix_square_size * x, self.metadata['window_size']),
@@ -202,7 +208,7 @@ class GridWorldEnv(gym.Env):
 
         if self.metadata['render_mode'] == "human":
             # The following line copies our drawings from `canvas` to the visible window
-            # self.screen.blit(canvas, canvas.get_rect())
+            self.screen.blit(canvas)
             pygame.display.flip()
 
             # We need to ensure that human-rendering occurs at the predefined framerate.
@@ -211,14 +217,14 @@ class GridWorldEnv(gym.Env):
             self.metadata["step"] += 1
             if self.metadata["terminated"]:
                 if self.metadata["direct"] and self.metadata["step"] > 7:
-                    self.metadata["render_fps"] = 2
+                    self.metadata["render_fps"] = SLOW
                 self.metadata["step"] = 0
                 self.metadata["terminated"] = False
                 self.metadata["direct"] = True
                 self.metadata["distance"] = -1
-            elif self.metadata["render_fps"] == 2 and self.metadata[
+            elif self.metadata["render_fps"] == SLOW and self.metadata[
             "step"] > 6 and not self.metadata["direct"]:
-                self.metadata["render_fps"] = 600
+                self.metadata["render_fps"] = self.metadata['refresh_rate']
             self.clock.tick(self.metadata["render_fps"])
             # pygame.QUIT event means the user clicked X to close your window
             for event in pygame.event.get():
@@ -228,7 +234,7 @@ class GridWorldEnv(gym.Env):
 
         else:  # rgb_array
             return np.transpose(
-                np.array(pygame.surfarray.pixels3d(self.screen)), axes=(1, 0, 2)
+                np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
             )
         return None
 
