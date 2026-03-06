@@ -165,6 +165,8 @@ class GridWorldEnv(gym.Env):
             if self.clock is None:
                 self.clock = pygame.time.Clock()
             self.metadata['refresh_rate'] = pygame.display.get_current_refresh_rate()
+            fps_font = pygame.font.Font()
+            fps_surf = fps_font.render('FPS: ' + str(self.metadata['refresh_rate']), True, 'black')
 
         canvas = pygame.Surface((self.metadata['window_size'], self.metadata['window_size']))
         canvas.fill((255, 255, 255))
@@ -209,6 +211,7 @@ class GridWorldEnv(gym.Env):
         if self.metadata['render_mode'] == "human":
             # The following line copies our drawings from `canvas` to the visible window
             self.screen.blit(canvas)
+            self.screen.blit(fps_surf)
             pygame.display.flip()
 
             # We need to ensure that human-rendering occurs at the predefined framerate.
