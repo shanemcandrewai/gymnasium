@@ -91,6 +91,7 @@ class GridWorldEnv(gym.Env):
         self.clock = None
         self._agent_location = None
         self._target_location = None
+        self.fps_font = None
 
     def _get_obs(self):
         return {"agent": self._agent_location, "target": self._target_location}
@@ -164,9 +165,7 @@ class GridWorldEnv(gym.Env):
                 pygame.display.set_caption('Grid World')
             if self.clock is None:
                 self.clock = pygame.time.Clock()
-            self.metadata['refresh_rate'] = pygame.display.get_current_refresh_rate()
-            fps_font = pygame.font.Font()
-            fps_surf = fps_font.render('FPS: ' + str(self.metadata['refresh_rate']), True, 'black')
+            self.fps_font = pygame.font.Font()
 
         canvas = pygame.Surface((self.metadata['window_size'], self.metadata['window_size']))
         canvas.fill((255, 255, 255))
@@ -209,37 +208,48 @@ class GridWorldEnv(gym.Env):
             )
 
         if self.metadata['render_mode'] == "human":
-            # The following line copies our drawings from `canvas` to the visible window
-            self.screen.blit(canvas)
-            self.screen.blit(fps_surf)
-            pygame.display.flip()
-
-            # We need to ensure that human-rendering occurs at the predefined framerate.
-            # The following line will automatically add a delay to
-            # keep the framerate stable.
-            self.metadata["step"] += 1
-            if self.metadata["terminated"]:
-                if self.metadata["direct"] and self.metadata["step"] > 7:
-                    self.metadata["render_fps"] = SLOW
-                self.metadata["step"] = 0
-                self.metadata["terminated"] = False
-                self.metadata["direct"] = True
-                self.metadata["distance"] = -1
-            elif self.metadata["render_fps"] == SLOW and self.metadata[
-            "step"] > 6 and not self.metadata["direct"]:
-                self.metadata["render_fps"] = self.metadata['refresh_rate']
-            self.clock.tick(self.metadata["render_fps"])
-            # pygame.QUIT event means the user clicked X to close your window
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.close()
-                    sys.exit()
-
+            self.render_frame_human(canvas)
         else:  # rgb_array
             return np.transpose(
                 np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
             )
         return None
+
+    def render_frame_human(self, canvas):
+        """Update FPS text, clock.tick"""
+        # The following line copies our drawings from `canvas` to the visible window
+        self.screen.blit(canvas)
+        if self.metadata.get("clock_tick"):
+            fps = round(1000 / self.metadata.get("clock_tick"))
+            fps_surf = self.fps_font.render('FPS: ' + str(fps), True, 'black')
+            self.screen.blit(fps_surf)
+        pygame.display.flip()
+
+        # We need to ensure that human-rendering occurs at the predefined framerate.
+        # The following line will automatically add a delay to
+        # keep the framerate stable.
+        self.metadata["step"] += 1
+        if self.metadata["terminated"]:
+            if self.metadata["direct"] and self.metadata["step"] > 7:
+                self.metadata["render_fps"] = SLOW
+            self.metadata["step"] = 0
+            self.metadata["terminated"] = False
+            self.metadata["direct"] = True
+            self.metadata["distance"] = -1
+        elif self.metadata.get("render_fps") == SLOW and self.metadata[
+        "step"] > 6 and not self.metadata["direct"]:
+            del self.metadata["render_fps"]
+
+        if self.metadata.get("render_fps"):
+            self.metadata["clock_tick"] = self.clock.tick(self.metadata["render_fps"])
+        else:
+            self.metadata["clock_tick"] = self.clock.tick()
+
+        # pygame.QUIT event means the user clicked X to close your window
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.close()
+                sys.exit()
 
     def close(self):
         if self.screen is not None:
