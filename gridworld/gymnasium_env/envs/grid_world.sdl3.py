@@ -52,8 +52,6 @@ GLOBAL_DATA = {
     "direct": True
 }
 
-
-
 class Actions(Enum):
     """Actions"""
     RIGHT = 0
@@ -64,7 +62,12 @@ class Actions(Enum):
 
 class GridWorldEnv(gym.Env):
     """Grid world environment"""
+    metadata = {"render_modes": [
+    "human", "rgb_array"], "render_fps": SLOW, "step": 0, "distance": -1, "terminated":
+        False, "direct": True}
     def __init__(self, render_mode=None, size=5):
+        self.metadata['size'] = 5
+        self.metadata['window_size'] = 512  # The size of the PyGame window
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2,
         # i.e. MultiDiscrete([size, size]).
@@ -292,16 +295,34 @@ def SDL_AppInit(appstate, argc, argv):# pylint: disable=invalid-name, unused-arg
         sdl3.SDL_Log("Error: %s".encode() % sdl3.SDL_GetError())
         return sdl3.SDL_APP_FAILURE
 
+    GLOBAL_DATA["GridWorldEnv"] = GridWorldEnv("human")
+    GLOBAL_DATA["GridWorldEnv"].reset()
+
     return sdl3.SDL_APP_CONTINUE
 
 
 @sdl3.SDL_AppEvent_func
 def SDL_AppEvent(appstate, event):# pylint: disable=invalid-name, unused-argument
     """SDL_AppEvent"""
+    if sdl3.SDL_DEREFERENCE(event).type == sdl3.SDL_EVENT_QUIT:
+        return sdl3.SDL_APP_SUCCESS
+    if sdl3.SDL_DEREFERENCE(event).type == sdl3.SDL_EVENT_KEY_DOWN:
+        if sdl3.SDL_DEREFERENCE(event).key.scancode == sdl3.SDL_SCANCODE_RIGHT:
+            GLOBAL_DATA["GridWorldEnv"].step(Actions.RIGHT)
+        if sdl3.SDL_DEREFERENCE(event).key.scancode == sdl3.SDL_SCANCODE_UP:
+            GLOBAL_DATA["GridWorldEnv"].step(Actions.UP)
+        if sdl3.SDL_DEREFERENCE(event).key.scancode == sdl3.SDL_SCANCODE_LEFT:
+            GLOBAL_DATA["GridWorldEnv"].step(Actions.LEFT)
+        if sdl3.SDL_DEREFERENCE(event).key.scancode == sdl3.SDL_SCANCODE_DOWN:
+            GLOBAL_DATA["GridWorldEnv"].step(Actions.DOWN)
+
+    return sdl3.SDL_APP_CONTINUE
 
 @sdl3.SDL_AppIterate_func
 def SDL_AppIterate(appstate):# pylint: disable=invalid-name, unused-argument
     """SDL_AppIterate"""
+    GLOBAL_DATA["GridWorldEnv"]._render_frame()
+    return sdl3.SDL_APP_CONTINUE
 
 @sdl3.SDL_AppQuit_func
 def SDL_AppQuit(appstate, result):# pylint: disable=invalid-name, unused-argument
