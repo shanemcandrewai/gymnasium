@@ -194,6 +194,7 @@ class GridWorldEnv(gym.Env):
         PIX_SQUARE_SIZE * self._agent_location[1], PIX_SQUARE_SIZE, PIX_SQUARE_SIZE)
         sdl3.SDL_RenderFillRect(RENDERER, rect)
         sdl3.SDL_RenderPresent(RENDERER)
+        return sdl3.SDL_APP_CONTINUE
 
     def _render_frame(self):
         if self.metadata['render_mode'] == "human":
@@ -343,8 +344,7 @@ def SDL_AppEvent(appstate, event):# pylint: disable=invalid-name, unused-argumen
 @sdl3.SDL_AppIterate_func
 def SDL_AppIterate(appstate):# pylint: disable=invalid-name, unused-argument
     """SDL_AppIterate"""
-    GLOBAL_DATA["SDL3_GridWorldEnv"].sdl3_render_frame()
-    return sdl3.SDL_APP_CONTINUE
+    return GLOBAL_DATA["SDL3_GridWorldEnv"].sdl3_render_frame()
 
 @sdl3.SDL_AppQuit_func
 def SDL_AppQuit(appstate, result):# pylint: disable=invalid-name, unused-argument
