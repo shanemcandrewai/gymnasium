@@ -44,9 +44,13 @@ class Actions(Enum):
 class GridWorldEnv(gym.Env):
     """Grid world environment"""
     # metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
-    metadata = {"render_modes": [
-    "human", "rgb_array"], "render_fps": SLOW, "step": 0, "distance": -1, "terminated":
-        False, "direct": True}
+    metadata = {"render_modes": ["human", "rgb_array"],
+                "render_fps": SLOW,
+                "step": 0,
+                "distance": -1,
+                "terminated": False,
+                "direct": True
+                }
 
     def __init__(self, render_mode=None, size=5):
         self.metadata['size'] = 5
@@ -159,7 +163,7 @@ class GridWorldEnv(gym.Env):
     def _render_frame(self):
         if self.metadata['render_mode'] == "human":
             if self.screen is None:
-                pygame.init()
+                pygame.init() # pylint: disable=no-member
                 self.screen = pygame.display.set_mode((
                 self.metadata['window_size'], self.metadata['window_size']))
                 pygame.display.set_caption('Grid World')
@@ -247,10 +251,10 @@ class GridWorldEnv(gym.Env):
 
         # pygame.QUIT event means the user clicked X to close your window
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT: # pylint: disable=no-member
                 self.close()
                 sys.exit()
 
     def close(self):
         if self.screen is not None:
-            pygame.quit()
+            pygame.quit() # pylint: disable=no-member
