@@ -39,8 +39,10 @@ import sdl3 # pylint: disable=wrong-import-order, wrong-import-position
 RENDERER = ctypes.POINTER(sdl3.SDL_Renderer)()
 WINDOW = ctypes.POINTER(sdl3.SDL_Window)()
 WINDOW_SIZE = 512
-SLOW = 4
 SIZE = 5
+PIX_SQUARE_SIZE = WINDOW_SIZE / SIZE  # The size of a single grid square in pixels
+
+SLOW = 4
 
 GLOBAL_DATA = {
     "font" : None,
@@ -49,7 +51,8 @@ GLOBAL_DATA = {
     "step": 0,
     "distance": -1,
     "terminated": False,
-    "direct": True
+    "direct": True,
+    "SDL3_GridWorldEnv": None
 }
 
 class Actions(Enum):
@@ -62,19 +65,23 @@ class Actions(Enum):
 
 class GridWorldEnv(gym.Env):
     """Grid world environment"""
-    metadata = {"render_modes": [
-    "human", "rgb_array"], "render_fps": SLOW, "step": 0, "distance": -1, "terminated":
-        False, "direct": True}
-    def __init__(self, render_mode=None, size=5):
-        self.metadata['size'] = 5
-        self.metadata['window_size'] = 512  # The size of the PyGame window
+    metadata = {"render_modes": ["human", "rgb_array"],
+                "render_fps": SLOW,
+                "step": 0,
+                "distance": -1,
+                "terminated": False,
+                "direct": True
+                }
+
+    def __init__(self, render_mode=None):
+
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2,
         # i.e. MultiDiscrete([size, size]).
         self.observation_space = spaces.Dict(
             {
-                "agent": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "target": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "agent": spaces.Box(0, SIZE - 1, shape=(2,), dtype=int),
+                "target": spaces.Box(0, SIZE - 1, shape=(2,), dtype=int),
             }
         )
 
@@ -127,14 +134,14 @@ class GridWorldEnv(gym.Env):
         super().reset(seed=seed)
 
         # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.integers(0, self.metadata['size'], size=2, dtype=int)
+        self._agent_location = self.np_random.integers(0, SIZE, size=2, dtype=int)
 
         # We will sample the target's location randomly until it does not
         # coincide with the agent's location
         self._target_location = self._agent_location
         while np.array_equal(self._target_location, self._agent_location):
             self._target_location = self.np_random.integers(
-                0, self.metadata['size'], size=2, dtype=int
+                0, SIZE, size=2, dtype=int
             )
 
         observation = self._get_obs()
@@ -151,7 +158,7 @@ class GridWorldEnv(gym.Env):
 
    # We use `np.clip` to make sure we don't leave the grid
         self._agent_location = np.clip(
-            self._agent_location + direction, 0, self.metadata['size'] - 1
+            self._agent_location + direction, 0, SIZE - 1
         )
         # An episode is done iff the agent has reached the target
         terminated = np.array_equal(self._agent_location, self._target_location)
@@ -172,54 +179,67 @@ class GridWorldEnv(gym.Env):
             return self._render_frame()
         return None
 
+    def sdl3_render_frame(self):
+        """render frame based on event"""
+        sdl3.SDL_SetRenderDrawColor(RENDERER, 255, 255, 255, sdl3.SDL_ALPHA_OPAQUE)
+        sdl3.SDL_RenderClear(RENDERER)
+        # First we draw the target=
+        sdl3.SDL_SetRenderDrawColor(RENDERER, 255, 0, 0, sdl3.SDL_ALPHA_OPAQUE)
+        rect = sdl3.SDL_FRect(PIX_SQUARE_SIZE * self._target_location[0],
+        PIX_SQUARE_SIZE * self._target_location[1], PIX_SQUARE_SIZE, PIX_SQUARE_SIZE)
+        sdl3.SDL_RenderFillRect(RENDERER, rect)
+        # Now we draw the agent
+        sdl3.SDL_SetRenderDrawColor(RENDERER, 0, 0, 255, sdl3.SDL_ALPHA_OPAQUE)
+        rect = sdl3.SDL_FRect(PIX_SQUARE_SIZE * self._agent_location[0],
+        PIX_SQUARE_SIZE * self._agent_location[1], PIX_SQUARE_SIZE, PIX_SQUARE_SIZE)
+        sdl3.SDL_RenderFillRect(RENDERER, rect)
+        sdl3.SDL_RenderPresent(RENDERER)
+
     def _render_frame(self):
         if self.metadata['render_mode'] == "human":
             if self.screen is None:
                 pygame.init() # pylint: disable=no-member
                 self.screen = pygame.display.set_mode((
-                self.metadata['window_size'], self.metadata['window_size']))
+                WINDOW_SIZE, WINDOW_SIZE))
                 pygame.display.set_caption('Grid World')
             if self.clock is None:
                 self.clock = pygame.time.Clock()
             self.fps_font = pygame.font.Font()
 
-        canvas = pygame.Surface((self.metadata['window_size'], self.metadata['window_size']))
+        canvas = pygame.Surface((WINDOW_SIZE, WINDOW_SIZE))
         canvas.fill((255, 255, 255))
-        pix_square_size = (
-            self.metadata['window_size'] / self.metadata['size']
-        )  # The size of a single grid square in pixels
 
         # First we draw the target
         pygame.draw.rect(
             canvas,
             (255, 0, 0),
             pygame.Rect(
-                pix_square_size * self._target_location,
-                (pix_square_size, pix_square_size),
+                PIX_SQUARE_SIZE * self._target_location,
+                (PIX_SQUARE_SIZE, PIX_SQUARE_SIZE),
             ),
         )
         # Now we draw the agent
         pygame.draw.circle(
             canvas,
             (0, 0, 255),
-            (self._agent_location + 0.5) * pix_square_size,
-            pix_square_size / 3,
+            (self._agent_location + 0.5) * PIX_SQUARE_SIZE,
+            PIX_SQUARE_SIZE / 3,
         )
 
         # Finally, add some gridlines
-        for x in range(self.metadata['size'] + 1):
+        for x in range(SIZE + 1):
             pygame.draw.line(
                 canvas,
                 0,
-                (0, pix_square_size * x),
-                (self.metadata['window_size'], pix_square_size * x),
+                (0, PIX_SQUARE_SIZE * x),
+                (WINDOW_SIZE, PIX_SQUARE_SIZE * x),
                 width=3,
             )
             pygame.draw.line(
                 canvas,
                 0,
-                (pix_square_size * x, 0),
-                (pix_square_size * x, self.metadata['window_size']),
+                (PIX_SQUARE_SIZE * x, 0),
+                (PIX_SQUARE_SIZE * x, WINDOW_SIZE),
                 width=3,
             )
 
@@ -284,7 +304,7 @@ def SDL_AppInit(appstate, argc, argv):# pylint: disable=invalid-name, unused-arg
         return sdl3.SDL_APP_FAILURE
 
     if not sdl3.SDL_CreateWindowAndRenderer(
-    "Pong NoobTuts using PySDL3".encode(), WINDOW_SIZE,
+    "Grid World".encode(), WINDOW_SIZE,
     WINDOW_SIZE, 0, WINDOW, RENDERER):
         sdl3.SDL_Log("Couldn't create window/renderer: %s".encode() % sdl3.SDL_GetError())
         return sdl3.SDL_APP_FAILURE
@@ -294,9 +314,8 @@ def SDL_AppInit(appstate, argc, argv):# pylint: disable=invalid-name, unused-arg
     if not GLOBAL_DATA["font"]:
         sdl3.SDL_Log("Error: %s".encode() % sdl3.SDL_GetError())
         return sdl3.SDL_APP_FAILURE
-
-    GLOBAL_DATA["GridWorldEnv"] = GridWorldEnv("human")
-    GLOBAL_DATA["GridWorldEnv"].reset()
+    GLOBAL_DATA["SDL3_GridWorldEnv"] = GridWorldEnv()
+    GLOBAL_DATA["SDL3_GridWorldEnv"].reset()
 
     return sdl3.SDL_APP_CONTINUE
 
@@ -308,20 +327,20 @@ def SDL_AppEvent(appstate, event):# pylint: disable=invalid-name, unused-argumen
         return sdl3.SDL_APP_SUCCESS
     if sdl3.SDL_DEREFERENCE(event).type == sdl3.SDL_EVENT_KEY_DOWN:
         if sdl3.SDL_DEREFERENCE(event).key.scancode == sdl3.SDL_SCANCODE_RIGHT:
-            GLOBAL_DATA["GridWorldEnv"].step(Actions.RIGHT)
+            GLOBAL_DATA["SDL3_GridWorldEnv"].sdl3_render_frame(Actions.RIGHT)
         if sdl3.SDL_DEREFERENCE(event).key.scancode == sdl3.SDL_SCANCODE_UP:
-            GLOBAL_DATA["GridWorldEnv"].step(Actions.UP)
+            GLOBAL_DATA["SDL3_GridWorldEnv"].sdl3_render_frame(Actions.UP)
         if sdl3.SDL_DEREFERENCE(event).key.scancode == sdl3.SDL_SCANCODE_LEFT:
-            GLOBAL_DATA["GridWorldEnv"].step(Actions.LEFT)
+            GLOBAL_DATA["SDL3_GridWorldEnv"].sdl3_render_frame(Actions.LEFT)
         if sdl3.SDL_DEREFERENCE(event).key.scancode == sdl3.SDL_SCANCODE_DOWN:
-            GLOBAL_DATA["GridWorldEnv"].step(Actions.DOWN)
+            GLOBAL_DATA["SDL3_GridWorldEnv"].sdl3_render_frame(Actions.DOWN)
 
     return sdl3.SDL_APP_CONTINUE
 
 @sdl3.SDL_AppIterate_func
 def SDL_AppIterate(appstate):# pylint: disable=invalid-name, unused-argument
     """SDL_AppIterate"""
-    GLOBAL_DATA["GridWorldEnv"]._render_frame()
+    GLOBAL_DATA["SDL3_GridWorldEnv"].sdl3_render_frame()
     return sdl3.SDL_APP_CONTINUE
 
 @sdl3.SDL_AppQuit_func
