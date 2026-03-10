@@ -4,7 +4,10 @@ copier copy https://github.com/Farama-Foundation/gymnasium-env-template.git "gri
 https://gymnasium.farama.org/tutorials/gymnasium_basics/environment_creation/
 Linted and cleaned up
 
-SDL3 : Allows manual game when this file is executed
+Migrated from pygame to SDL3
+allows manual game when this file is excuted
+can be executed from grid_world.dqn.py (which calls reset and step,  
+but can't quit SDL3 window
 
 Assuming this file is -
 C:\\Users\\shane\\dev\\gymnasium\\gridworld\\gymnasium_env\\envs\\grid_world.py
@@ -27,10 +30,8 @@ env = gym.make('gridworld.gymnasium_env:GridWorld-v0')
 """
 
 from enum import Enum
-import sys
 import ctypes
 import os
-import pygame
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -118,6 +119,8 @@ class GridWorldEnv(gym.Env):
         self._target_location = None
         self.fps_font = None
 
+        GLOBAL_DATA['sdl_appinit'] = self.sdl_appinit()
+
     def _get_obs(self):
         return {"agent": self._agent_location, "target": self._target_location}
 
@@ -149,8 +152,8 @@ class GridWorldEnv(gym.Env):
         observation = self._get_obs()
         info = self._get_info()
 
-        if self.metadata['render_mode'] == "human":
-            self._render_frame()
+        # if self.metadata['render_mode'] == "human":
+            # self._render_frame()
 
         return observation, info
 
@@ -172,13 +175,14 @@ class GridWorldEnv(gym.Env):
         info = self._get_info()
 
         if self.metadata['render_mode'] == "human":
-            self._render_frame()
+            # self._render_frame()
+            self.sdl3_render_frame()
 
         return observation, reward, terminated, False, info
 
     def render(self):
         if self.metadata['render_mode'] == "rgb_array":
-            return self._render_frame()
+            return self.sdl3_render_frame()
         return None
 
     def sdl3_render_frame(self):
@@ -198,129 +202,39 @@ class GridWorldEnv(gym.Env):
         sdl3.SDL_RenderPresent(RENDERER)
         return sdl3.SDL_APP_CONTINUE
 
-    def _render_frame(self):
-        if self.metadata['render_mode'] == "human":
-            if self.screen is None:
-                pygame.init() # pylint: disable=no-member
-                self.screen = pygame.display.set_mode((
-                WINDOW_SIZE, WINDOW_SIZE))
-                pygame.display.set_caption('Grid World')
-            if self.clock is None:
-                self.clock = pygame.time.Clock()
-            self.fps_font = pygame.font.Font()
+    def sdl_appinit(self):
+        """SDL_AppInit"""
+        if not sdl3.SDL_Init(sdl3.SDL_INIT_VIDEO):
+            sdl3.SDL_Log("Couldn't initialize SDL: %s".encode() % sdl3.SDL_GetError())
+            return sdl3.SDL_APP_FAILURE
 
-        canvas = pygame.Surface((WINDOW_SIZE, WINDOW_SIZE))
-        canvas.fill((255, 255, 255))
+        # Initialize the TTF library
+        if not sdl3.TTF_Init():
+            sdl3.SDL_Log("Couldn't initialize TTF: %s".encode() % sdl3.SDL_GetError())
+            return sdl3.SDL_APP_FAILURE
 
-        # First we draw the target
-        pygame.draw.rect(
-            canvas,
-            (255, 0, 0),
-            pygame.Rect(
-                PIX_SQUARE_SIZE * self._target_location,
-                (PIX_SQUARE_SIZE, PIX_SQUARE_SIZE),
-            ),
-        )
-        # Now we draw the agent
-        pygame.draw.circle(
-            canvas,
-            (0, 0, 255),
-            (self._agent_location + 0.5) * PIX_SQUARE_SIZE,
-            PIX_SQUARE_SIZE / 3,
-        )
+        if not sdl3.SDL_CreateWindowAndRenderer(
+        "Grid World".encode(), WINDOW_SIZE,
+        WINDOW_SIZE, 0, WINDOW, RENDERER):
+            sdl3.SDL_Log("Couldn't create window/renderer: %s".encode() % sdl3.SDL_GetError())
+            return sdl3.SDL_APP_FAILURE
 
-        # Finally, add some gridlines
-        for x in range(SIZE + 1):
-            pygame.draw.line(
-                canvas,
-                0,
-                (0, PIX_SQUARE_SIZE * x),
-                (WINDOW_SIZE, PIX_SQUARE_SIZE * x),
-                width=3,
-            )
-            pygame.draw.line(
-                canvas,
-                0,
-                (PIX_SQUARE_SIZE * x, 0),
-                (PIX_SQUARE_SIZE * x, WINDOW_SIZE),
-                width=3,
-            )
+        sdl3.SDL_SetRenderVSync(RENDERER, 1) # Turn on vertical sync
+        GLOBAL_DATA["font"] = sdl3.TTF_OpenFont("C:/Windows/Fonts/arial.ttf".encode(), 26)
+        if not GLOBAL_DATA["font"]:
+            sdl3.SDL_Log("Error: %s".encode() % sdl3.SDL_GetError())
+            return sdl3.SDL_APP_FAILURE
+        return sdl3.SDL_APP_CONTINUE
 
-        if self.metadata['render_mode'] == "human":
-            self.render_frame_human(canvas)
-        else:  # rgb_array
-            return np.transpose(
-                np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
-            )
-        return None
-
-    def render_frame_human(self, canvas):
-        """Update FPS text, clock.tick"""
-        # The following line copies our drawings from `canvas` to the visible window
-        self.screen.blit(canvas)
-        if self.metadata.get("clock_tick"):
-            fps = round(1000 / self.metadata.get("clock_tick"))
-            fps_surf = self.fps_font.render('FPS: ' + str(fps), True, 'black')
-            self.screen.blit(fps_surf)
-        pygame.display.flip()
-
-        # We need to ensure that human-rendering occurs at the predefined framerate.
-        # The following line will automatically add a delay to
-        # keep the framerate stable.
-        self.metadata["step"] += 1
-        if self.metadata["terminated"]:
-            if self.metadata["direct"] and self.metadata["step"] > 7:
-                self.metadata["render_fps"] = SLOW
-            self.metadata["step"] = 0
-            self.metadata["terminated"] = False
-            self.metadata["direct"] = True
-            self.metadata["distance"] = -1
-        elif self.metadata.get("render_fps") == SLOW and self.metadata[
-        "step"] > 6 and not self.metadata["direct"]:
-            del self.metadata["render_fps"]
-
-        if self.metadata.get("render_fps"):
-            self.metadata["clock_tick"] = self.clock.tick(self.metadata["render_fps"])
-        else:
-            self.metadata["clock_tick"] = self.clock.tick()
-
-        # pygame.QUIT event means the user clicked X to close your window
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT: # pylint: disable=no-member
-                self.close()
-                sys.exit()
-
-    def close(self):
-        if self.screen is not None:
-            pygame.quit() # pylint: disable=no-member
 
 @sdl3.SDL_AppInit_func
 def SDL_AppInit(appstate, argc, argv):# pylint: disable=invalid-name, unused-argument
     """SDL_AppInit"""
-    if not sdl3.SDL_Init(sdl3.SDL_INIT_VIDEO):
-        sdl3.SDL_Log("Couldn't initialize SDL: %s".encode() % sdl3.SDL_GetError())
-        return sdl3.SDL_APP_FAILURE
-
-    # Initialize the TTF library
-    if not sdl3.TTF_Init():
-        sdl3.SDL_Log("Couldn't initialize TTF: %s".encode() % sdl3.SDL_GetError())
-        return sdl3.SDL_APP_FAILURE
-
-    if not sdl3.SDL_CreateWindowAndRenderer(
-    "Grid World".encode(), WINDOW_SIZE,
-    WINDOW_SIZE, 0, WINDOW, RENDERER):
-        sdl3.SDL_Log("Couldn't create window/renderer: %s".encode() % sdl3.SDL_GetError())
-        return sdl3.SDL_APP_FAILURE
-
-    sdl3.SDL_SetRenderVSync(RENDERER, 1) # Turn on vertical sync
-    GLOBAL_DATA["font"] = sdl3.TTF_OpenFont("C:/Windows/Fonts/arial.ttf".encode(), 26)
-    if not GLOBAL_DATA["font"]:
-        sdl3.SDL_Log("Error: %s".encode() % sdl3.SDL_GetError())
-        return sdl3.SDL_APP_FAILURE
     GLOBAL_DATA["SDL3_GridWorldEnv"] = GridWorldEnv()
-    GLOBAL_DATA["SDL3_GridWorldEnv"].reset()
-
-    return sdl3.SDL_APP_CONTINUE
+    # rc = GLOBAL_DATA["SDL3_GridWorldEnv"].sdl_appinit()
+    if GLOBAL_DATA['sdl_appinit'] == sdl3.SDL_APP_CONTINUE:
+        GLOBAL_DATA["SDL3_GridWorldEnv"].reset()
+    return GLOBAL_DATA['sdl_appinit']
 
 
 @sdl3.SDL_AppEvent_func
