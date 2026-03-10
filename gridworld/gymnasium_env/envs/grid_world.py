@@ -292,33 +292,39 @@ class GridWorldEnv(gym.Env):
         if self.screen is not None:
             pygame.quit() # pylint: disable=no-member
 
+    def sdl_appinit(self):
+        """SDL_AppInit"""
+        if not sdl3.SDL_Init(sdl3.SDL_INIT_VIDEO):
+            sdl3.SDL_Log("Couldn't initialize SDL: %s".encode() % sdl3.SDL_GetError())
+            return sdl3.SDL_APP_FAILURE
+
+        # Initialize the TTF library
+        if not sdl3.TTF_Init():
+            sdl3.SDL_Log("Couldn't initialize TTF: %s".encode() % sdl3.SDL_GetError())
+            return sdl3.SDL_APP_FAILURE
+
+        if not sdl3.SDL_CreateWindowAndRenderer(
+        "Grid World".encode(), WINDOW_SIZE,
+        WINDOW_SIZE, 0, WINDOW, RENDERER):
+            sdl3.SDL_Log("Couldn't create window/renderer: %s".encode() % sdl3.SDL_GetError())
+            return sdl3.SDL_APP_FAILURE
+
+        sdl3.SDL_SetRenderVSync(RENDERER, 1) # Turn on vertical sync
+        GLOBAL_DATA["font"] = sdl3.TTF_OpenFont("C:/Windows/Fonts/arial.ttf".encode(), 26)
+        if not GLOBAL_DATA["font"]:
+            sdl3.SDL_Log("Error: %s".encode() % sdl3.SDL_GetError())
+            return sdl3.SDL_APP_FAILURE
+        return sdl3.SDL_APP_CONTINUE
+
+
 @sdl3.SDL_AppInit_func
 def SDL_AppInit(appstate, argc, argv):# pylint: disable=invalid-name, unused-argument
     """SDL_AppInit"""
-    if not sdl3.SDL_Init(sdl3.SDL_INIT_VIDEO):
-        sdl3.SDL_Log("Couldn't initialize SDL: %s".encode() % sdl3.SDL_GetError())
-        return sdl3.SDL_APP_FAILURE
-
-    # Initialize the TTF library
-    if not sdl3.TTF_Init():
-        sdl3.SDL_Log("Couldn't initialize TTF: %s".encode() % sdl3.SDL_GetError())
-        return sdl3.SDL_APP_FAILURE
-
-    if not sdl3.SDL_CreateWindowAndRenderer(
-    "Grid World".encode(), WINDOW_SIZE,
-    WINDOW_SIZE, 0, WINDOW, RENDERER):
-        sdl3.SDL_Log("Couldn't create window/renderer: %s".encode() % sdl3.SDL_GetError())
-        return sdl3.SDL_APP_FAILURE
-
-    sdl3.SDL_SetRenderVSync(RENDERER, 1) # Turn on vertical sync
-    GLOBAL_DATA["font"] = sdl3.TTF_OpenFont("C:/Windows/Fonts/arial.ttf".encode(), 26)
-    if not GLOBAL_DATA["font"]:
-        sdl3.SDL_Log("Error: %s".encode() % sdl3.SDL_GetError())
-        return sdl3.SDL_APP_FAILURE
     GLOBAL_DATA["SDL3_GridWorldEnv"] = GridWorldEnv()
-    GLOBAL_DATA["SDL3_GridWorldEnv"].reset()
-
-    return sdl3.SDL_APP_CONTINUE
+    rc = GLOBAL_DATA["SDL3_GridWorldEnv"].sdl_appinit()
+    if rc == sdl3.SDL_APP_CONTINUE:
+        GLOBAL_DATA["SDL3_GridWorldEnv"].reset()
+    return rc
 
 
 @sdl3.SDL_AppEvent_func
